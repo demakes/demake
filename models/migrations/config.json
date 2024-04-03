@@ -1,0 +1,6 @@
+{
+  "versionTable": {
+    "name": "klaro_version",
+    "versionColumn": "version_num"
+  }
+}

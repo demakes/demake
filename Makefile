@@ -1,21 +1,12 @@
-## simple makefile to log workflow
-.PHONY: all test clean build install
+all: build install
 
-SHELL := /bin/bash
-
-GOFLAGS ?= $(GOFLAGS:)
-
-all: dep install
+.PHONY: build install
 
 build:
-	@go build $(GOFLAGS) ./...
-
-dep:
-	@go get ./...
+	@go build ./...
 
 install:
-	@go install $(GOFLAGS) ./...
+	@go install ./...
 
-clean:
-	@go clean $(GOFLAGS) -i ./...
-
+watch: install
+	.scripts/watch_and_run.sh

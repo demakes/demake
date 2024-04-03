@@ -1,0 +1,7 @@
+{
+	"database": {
+		"name":     "klaro",
+		"type":     "sqlite3",
+		"url":      "sites.sqlite3?_foreign_keys=on&parseTime=true"
+	}
+}

@@ -1,14 +1,23 @@
-package klaro
+package sites
 
 import (
 	"fmt"
 )
 
+// NotFound is returned when a given object can't be found
 var NotFound = fmt.Errorf("not found")
 
+// A Backend can retrieve objects
 type Backend interface {
-	Sites() ([]*Site, error)
-	Routes(siteId uint64) ([]*Route, error)
-	Pages(siteId uint64, filters map[string]any) ([]*Page, error)
-	Page(pageId uint64) (*Page, error)
+	// Sites
+
+	// Retrieve all sites matching the given filters
+	Sites(filters map[string]any) ([]*Site, error)
+}
+
+// A WritableBackend can write and delete objects
+type WritableBackend interface {
+	// Sites
+	SaveSite(site *Site) error
+	DeleteSite(site *Site) error
 }

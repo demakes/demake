@@ -1,13 +1,20 @@
 # Data Model
 
-Klaro has a very simple data model:
+This document describes the data model of Klaro Sites.
 
-* A `Site` defines a website.
-* A `Page` defines a single page in a given `Site`.
-* A `Route` maps a HTTP route to a given `Page`.
-* A `Variable` contains dynamic content that can be used in a `Page`.
+## Requirements
 
-That's it! This alone suffices to model any website, including complex patterns like multiple languages and dynamically created pages.
+* It should be easy to load and save data from various backends (e.g. a directory or a database).
+* It should be possible to manage changes easily and e.g. implement approval workflows.
+* It should be easy to present different versions of a site for purposes such as A/B testing, reviewing etc.
+* It should be easy to extend the data model with new types and functionality.
+* It should be very efficient loading and saving objects.
+* It should be very easy to work with the objects in Golang.
+* It should be very easy to write a new backend.
+
+## Models
+
+Klaro uses a graph data model. Details to come.
 
 ## Site
 
@@ -18,6 +25,10 @@ How to handle multilingual sites? Keep it simple, a `Site` object won't contain 
 ## Page
 
 A `Page` can have multiple attributes like content, language, title etc. Some attributes are required, other can be optional.
+
+## Template
+
+A `Template` defines a Gospel-compatible HTML template that is used to render pages. Templates can be retrieved from a `FileSystem`.
 
 ## Route
 
@@ -31,7 +42,7 @@ A `Variable` stores content that is used across different pages, e.g. translated
 
 ```yaml
 sites:
-	- domain: klaro.org
+	- domain: sites.org
 pages:
 	- name: homepage
 	  type: template
