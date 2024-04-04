@@ -7,8 +7,14 @@ import (
 type Node struct {
 	orm.DBModel
 	orm.JSONModel
-	Type string `json:"type"`
-	Hash []byte `json:"hash"`
+	Type     string  `json:"type"`
+	Hash     []byte  `json:"hash"`
+	Outgoing []*Edge `json:"outgoing" db:"ignore"`
+	Incoming []*Edge `json:"incoming" db:"ignore"`
+}
+
+func MakeNode(db func() orm.DB) *Node {
+	return orm.Init(&Node{}, db)
 }
 
 type Edge struct {
@@ -21,6 +27,10 @@ type Edge struct {
 	From   *Node  `db:"fk:FromID"`
 	ToID   int64  `json:"toID"`
 	To     *Node  `db:"fk:ToID"`
+}
+
+func MakeEdge(db func() orm.DB) *Edge {
+	return orm.Init(&Edge{}, db)
 }
 
 type NodeWithEdge struct {
