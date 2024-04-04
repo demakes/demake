@@ -67,13 +67,24 @@ func runMigrations() error {
 
 func runServer() {
 
+	el := Div(
+		P("This is a test"),
+		func(c Context) (any, error) {
+			return P("another one"), nil
+		},
+		Strong("strong"),
+		Route("/test(/[a-z]+)?", Strong("another test")),
+	)
+
 	server := MakeServer(&App{
 		StaticPrefix: "/static",
 		Root: func(c Context) Element {
-
-			return &HTMLElement{
-				Tag:      "div",
-				Children: []any{P("test")},
+			if v, err := el.Generate(c); err != nil {
+				return Div(Fmt("error: %v", err))
+			} else if el, ok := v.(Element); !ok {
+				return Div("not an element")
+			} else {
+				return el
 			}
 		},
 	})
