@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"fmt"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
@@ -28,7 +29,7 @@ func TestBasicGraph(t *testing.T) {
 
 		node := &models.Node{
 			Type: "test",
-			Hash: []byte("abc"),
+			Hash: []byte(fmt.Sprintf("abc%d", i)),
 		}
 
 		orm.Init(node, func() orm.DB { return db })

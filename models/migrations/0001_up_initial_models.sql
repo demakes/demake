@@ -18,7 +18,6 @@ CREATE TABLE node (
     {{else}}
     id BIGINT NOT NULL,
     {{end}}
-    ext_id bytea NOT NULL,
     hash bytea NOT NULL,
     type character varying NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
@@ -44,11 +43,10 @@ ALTER TABLE ONLY node
 
 {{ end }}
 
-CREATE UNIQUE INDEX ix_node_ext_id ON node (ext_id);
+CREATE UNIQUE INDEX ix_node_hash ON node (hash) WHERE (deleted_at IS NULL);
 CREATE INDEX ix_node_created_at ON node (created_at);
 CREATE INDEX ix_node_deleted_at ON node (deleted_at);
 CREATE INDEX ix_node_updated_at ON node (updated_at);
-CREATE INDEX ix_node_hash ON node(hash);
 CREATE INDEX ix_node_type ON node (type);
 
 /* Edges */
@@ -97,7 +95,7 @@ ALTER TABLE ONLY edge
 
 CREATE INDEX ix_edge_created_at ON edge (created_at);
 CREATE INDEX ix_edge_deleted_at ON edge (deleted_at);
-CREATE UNIQUE INDEX ix_edge_ext_id ON edge (ext_id);
+CREATE UNIQUE INDEX ix_edge_ext_id ON edge (ext_id) WHERE (deleted_at IS NULL);
 CREATE INDEX ix_edge_name ON edge (name);
 CREATE INDEX ix_edge_key ON edge (key);
 CREATE INDEX ix_edge_ind ON edge (ind);

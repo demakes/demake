@@ -33,6 +33,11 @@ func DB(settings *sites.Settings) (orm.DB, error) {
 		}
 	}
 
+	// we clear all previous connections
+	if err := orm.ClearConnections(); err != nil {
+		return nil, err
+	}
+
 	db, err := orm.Connect("klaro", settings.Database)
 
 	if err != nil {

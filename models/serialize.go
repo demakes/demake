@@ -68,6 +68,8 @@ func ExtractTags(field reflect.StructField, name string) []Tag {
 
 func Serialize(model any, db func() orm.DB) (*Node, error) {
 
+	hash := MakeHash()
+
 	modelType := reflect.TypeOf(model)
 	modelValue := reflect.ValueOf(model)
 
@@ -102,16 +104,19 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 		if !fieldValue.CanInterface() {
 			return nil, fmt.Errorf("cannot interface: %s", field.Field)
 		}
-		data[field.Name] = fieldValue.Interface()
+		v := fieldValue.Interface()
+		if err := hash.Add(v); err != nil {
+			return nil, fmt.Errorf("error hashing field %s: %v", field.Field, err)
+		}
+		data[field.Name] = v
 	}
 
 	for _, relatedSchema := range schema.RelatedSchemas {
-		fmt.Println(relatedSchema.Name, relatedSchema.Field)
 		fieldValue := modelValue.FieldByName(relatedSchema.Field)
 
 		if fieldValue.IsZero() {
 			if !relatedSchema.Optional {
-				return nil, fmt.Errorf("related schema %s not defined but isn't optional", relatedSchema.Name)
+				return nil, fmt.Errorf("related schema '%s' not defined but isn't optional", relatedSchema.Name)
 			}
 			// we skip this
 			continue
@@ -130,10 +135,17 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 				return nil, fmt.Errorf("cannot serialize related model: %v", err)
 			} else {
 				edge := MakeEdge(db)
+				// we set the type to struct
+				edge.Type = int(Struct)
 				// we set the edge name
 				edge.Name = relatedSchema.Name
 				// we link the edge to the nodes
 				edge.FromTo(node, relatedNode)
+
+				if err := hash.Add([]any{"edge", edge.Type, "name", edge.Name, "hash", relatedNode.Hash}); err != nil {
+					return nil, fmt.Errorf("cannot add edge hash: %v", err)
+				}
+
 			}
 		case Map:
 			if fieldValue.Kind() != reflect.Map {
@@ -159,11 +171,18 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
 					edge := MakeEdge(db)
+					// we set the type to map
+					edge.Type = int(Map)
 					// we set the edge key to denote it as a map
 					edge.Key = mapKey.Interface().(string)
 					edge.Name = relatedSchema.Name
 					// we link the edge to the nodes
 					edge.FromTo(node, relatedNode)
+
+					if err := hash.Add([]any{"edge", edge.Type, "name", edge.Name, "key", edge.Key, "hash", relatedNode.Hash}); err != nil {
+						return nil, fmt.Errorf("cannot add edge hash: %v", err)
+					}
+
 				}
 			}
 		case Slice:
@@ -186,21 +205,31 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
 					edge := MakeEdge(db)
+					// we set the type to slice
+					edge.Type = int(Slice)
 					// we set the edge index to denote it as a slice
 					edge.Index = i
 					edge.Name = relatedSchema.Name
 					// we link the edge to the nodes
 					edge.FromTo(node, relatedNode)
+
+					if err := hash.Add([]any{"edge", edge.Type, "name", edge.Name, "index", edge.Index, "hash", relatedNode.Hash}); err != nil {
+						return nil, fmt.Errorf("cannot add edge hash: %v", err)
+					}
+
 				}
 			}
 		}
 	}
 
+	// we generate the node hash
+	node.Hash = hash.Sum()
+	// we set the node type
+	node.Type = schema.Name
+
 	if err := node.JSON.Update(data); err != nil {
 		return nil, fmt.Errorf("cannot set data: %v", err)
 	}
-
-	fmt.Println(data)
 
 	return node, nil
 }

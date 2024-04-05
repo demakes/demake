@@ -51,7 +51,7 @@ type ModelSchemaField struct {
 }
 
 // maps a given type name to a struct
-var Registry = map[string]*ModelSchema{}
+var Registry = []*ModelSchema{}
 
 func SchemaForType(modelType reflect.Type) *ModelSchema {
 	// if this is a pointer to a struct, we "unpoint" it first
@@ -71,7 +71,7 @@ func SchemaFor(model any) *ModelSchema {
 	return SchemaForType(reflect.TypeOf(model))
 }
 
-func MakeModelSchema(model any) (*ModelSchema, error) {
+func MakeModelSchema(model any, name string) (*ModelSchema, error) {
 
 	modelType := reflect.TypeOf(model)
 
@@ -181,30 +181,20 @@ fieldsLoop:
 		Type:           modelType,
 		Fields:         fields,
 		RelatedSchemas: related,
+		Name:           name,
 	}, nil
 }
 
 func Register[T any](name string) error {
 	nt := *new(T)
-	if schema, err := MakeModelSchema(nt); err != nil {
-		return err
-	} else {
-		Registry[name] = schema
+	if existingSchema := SchemaFor(nt); existingSchema != nil {
+		// we skip this
 		return nil
 	}
-}
-
-func GetType(name string) any {
-	return Registry[name]
-}
-
-type MyNode struct {
-	Foo string
-}
-
-func init() {
-	// we register the MyNode type for the 'myNode' type
-	Register[MyNode]("myNode")
-	// GetType can be used to reflectively create a new struct for the type
-	fmt.Printf("Type: %T\n", GetType("myNode"))
+	if schema, err := MakeModelSchema(nt, name); err != nil {
+		return err
+	} else {
+		Registry = append(Registry, schema)
+		return nil
+	}
 }
