@@ -2,9 +2,21 @@ package models
 
 import (
 	"fmt"
+	"github.com/gospel-sh/gospel/orm"
 	"reflect"
+	"regexp"
 	"strings"
 )
+
+// https://gist.github.com/stoewer/fbe273b711e6a06315d19552dd4d33e6f
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+
+func ToSnakeCase(str string) string {
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	return strings.ToLower(snake)
+}
 
 type Tag struct {
 	Name  string
@@ -30,9 +42,9 @@ func GetTag(tags []Tag, key string) (Tag, bool) {
 	return Tag{}, false
 }
 
-func ExtractTags(field reflect.StructField) []Tag {
+func ExtractTags(field reflect.StructField, name string) []Tag {
 	tags := make([]Tag, 0)
-	if dbValue, ok := field.Tag.Lookup("graph"); ok {
+	if dbValue, ok := field.Tag.Lookup(name); ok {
 		strTags := strings.Split(dbValue, ",")
 		for _, tag := range strTags {
 			kv := strings.Split(dbValue, ":")
@@ -54,14 +66,7 @@ func ExtractTags(field reflect.StructField) []Tag {
 	return tags
 }
 
-func Serialize(model any) (*Node, error) {
-	/*
-		- We go through all of the fields of the model
-		- If it's a list or a map, we check if the value type is a mapped model
-		- If so, we serialize it and create edges for the mapped models
-		- If not, we add it to the data of the node
-		- We hash the node
-	*/
+func Serialize(model any, db func() orm.DB) (*Node, error) {
 
 	modelType := reflect.TypeOf(model)
 	modelValue := reflect.ValueOf(model)
@@ -72,17 +77,91 @@ func Serialize(model any) (*Node, error) {
 		modelValue = modelValue.Elem()
 	}
 
+	// we check that this is indeed a struct
+	if modelType.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("not a struct")
+	}
+
 	schema := SchemaFor(model)
 
 	if schema == nil {
 		return nil, fmt.Errorf("unknown node type: %T", model)
 	}
 
-	// we check that this is indeed a struct
-	if modelType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("not a struct")
+	node := MakeNode(db)
+	data := map[string]any{}
+
+	for _, field := range schema.Fields {
+		fieldValue := modelValue.FieldByName(field.Field)
+		// we skip zero values
+		if fieldValue.IsZero() {
+			data[field.Name] = nil
+			continue
+		}
+		// this shouldn't happen, but can...
+		if !fieldValue.CanInterface() {
+			return nil, fmt.Errorf("cannot interface: %s", field.Field)
+		}
+		data[field.Name] = fieldValue.Interface()
 	}
 
-	node := MakeNode(nil)
+	for _, relatedSchema := range schema.RelatedSchemas {
+		fmt.Println(relatedSchema.Name, relatedSchema.Field)
+		fieldValue := modelValue.FieldByName(relatedSchema.Field)
+
+		if fieldValue.IsZero() {
+			if !relatedSchema.Optional {
+				return nil, fmt.Errorf("related schema %s not defined but isn't optional", relatedSchema.Name)
+			}
+			// we skip this
+			continue
+		}
+
+		switch relatedSchema.Type {
+		case Struct:
+			// if this is a pointer to a struct, we "unpoint" it first
+			if fieldValue.Kind() == reflect.Pointer {
+				fieldValue = fieldValue.Elem()
+			}
+			if fieldValue.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("expected a struct")
+			}
+			if relatedNode, err := Serialize(fieldValue.Interface(), db); err != nil {
+				return nil, fmt.Errorf("cannot serialize related model: %v", err)
+			} else {
+				edge := MakeEdge(db)
+				// we link the edge to the nodes
+				edge.FromTo(node, relatedNode)
+			}
+		case Map:
+		case Slice:
+			if fieldValue.Kind() != reflect.Slice {
+				return nil, fmt.Errorf("expected a slice")
+			}
+			for i := 0; i < fieldValue.Len(); i++ {
+				sliceValue := fieldValue.Index(i)
+				if sliceValue.Kind() == reflect.Pointer {
+					sliceValue = sliceValue.Elem()
+				}
+				if sliceValue.Kind() != reflect.Struct {
+					return nil, fmt.Errorf("expected a struct")
+				}
+				if relatedNode, err := Serialize(sliceValue.Interface(), db); err != nil {
+					return nil, fmt.Errorf("cannot serialize related model: %v", err)
+				} else {
+					edge := MakeEdge(db)
+					// we link the edge to the nodes
+					edge.FromTo(node, relatedNode)
+				}
+			}
+		}
+	}
+
+	if err := node.JSON.Update(data); err != nil {
+		return nil, fmt.Errorf("cannot set data: %v", err)
+	}
+
+	fmt.Println(data)
+
 	return node, nil
 }

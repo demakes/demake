@@ -33,6 +33,15 @@ func MakeEdge(db func() orm.DB) *Edge {
 	return orm.Init(&Edge{}, db)
 }
 
+func (e *Edge) FromTo(from, to *Node) {
+	e.From = from
+	e.To = from
+	e.FromID = from.ID
+	e.ToID = to.ID
+	from.Outgoing = append(from.Outgoing, e)
+	from.Incoming = append(from.Incoming, e)
+}
+
 type NodeWithEdge struct {
 	Edge *Edge
 	Node *Node
