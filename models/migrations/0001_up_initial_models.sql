@@ -70,6 +70,8 @@ CREATE TABLE edge (
     name character varying NOT NULL,
     key character varying, -- only defined for map-based edges
     ind integer,
+    type integer,
+    follow bool DEFAULT TRUE,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     deleted_at timestamp without time zone,
@@ -99,5 +101,6 @@ CREATE UNIQUE INDEX ix_edge_ext_id ON edge (ext_id);
 CREATE INDEX ix_edge_name ON edge (name);
 CREATE INDEX ix_edge_key ON edge (key);
 CREATE INDEX ix_edge_ind ON edge (ind);
+CREATE INDEX ix_edge_type ON edge (type);
 CREATE INDEX ix_edge_updated_at ON edge (updated_at);
 CREATE INDEX ix_edge_from_to_id ON edge (from_id, to_id);

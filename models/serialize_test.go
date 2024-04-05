@@ -65,4 +65,26 @@ func TestSerialize(t *testing.T) {
 	if len(node.Outgoing) != 2 {
 		t.Fatalf("expected one outgoing edge, got %d", len(node.Outgoing))
 	}
+
+	styleEdge := node.Outgoing[0]
+	classEdge := node.Outgoing[1]
+
+	if styleEdge.Index != 0 {
+		t.Fatalf("expected 0 index")
+	}
+
+	if classEdge.Index != 1 {
+		t.Fatalf("expected 1 index")
+	}
+
+	expected = map[string]any{"name": "style", "value": "font-size:12px"}
+	if !reflect.DeepEqual(styleEdge.To.JSON.JSON, expected) {
+		t.Fatalf("data doesn't match: %v vs. %v", styleEdge.To.JSON.JSON, expected)
+	}
+
+	expected = map[string]any{"name": "class", "value": "bar"}
+	if !reflect.DeepEqual(classEdge.To.JSON.JSON, expected) {
+		t.Fatalf("data doesn't match: %v vs. %v", styleEdge.To.JSON.JSON, expected)
+	}
+
 }

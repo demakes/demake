@@ -130,11 +130,44 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 				return nil, fmt.Errorf("cannot serialize related model: %v", err)
 			} else {
 				edge := MakeEdge(db)
+				// we set the edge name
+				edge.Name = relatedSchema.Name
 				// we link the edge to the nodes
 				edge.FromTo(node, relatedNode)
 			}
 		case Map:
+			if fieldValue.Kind() != reflect.Map {
+				return nil, fmt.Errorf("expected a map")
+			}
+			if fieldValue.Type().Key().Kind() != reflect.String {
+				return nil, fmt.Errorf("expected a string key")
+			}
+			iter := fieldValue.MapRange()
+			for iter.Next() {
+				mapKey := iter.Key()
+				mapValue := iter.Value()
+				if mapValue.Kind() == reflect.Pointer {
+					mapValue = mapValue.Elem()
+				}
+				if mapValue.Kind() != reflect.Struct {
+					return nil, fmt.Errorf("expected a struct")
+				}
+				if mapValue.IsZero() || mapKey.IsZero() {
+					return nil, fmt.Errorf("found a nil value or key in a map")
+				}
+				if relatedNode, err := Serialize(mapValue.Interface(), db); err != nil {
+					return nil, fmt.Errorf("cannot serialize related model: %v", err)
+				} else {
+					edge := MakeEdge(db)
+					// we set the edge key to denote it as a map
+					edge.Key = mapKey.Interface().(string)
+					edge.Name = relatedSchema.Name
+					// we link the edge to the nodes
+					edge.FromTo(node, relatedNode)
+				}
+			}
 		case Slice:
+			// this is a list of
 			if fieldValue.Kind() != reflect.Slice {
 				return nil, fmt.Errorf("expected a slice")
 			}
@@ -146,10 +179,16 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 				if sliceValue.Kind() != reflect.Struct {
 					return nil, fmt.Errorf("expected a struct")
 				}
+				if sliceValue.IsZero() {
+					return nil, fmt.Errorf("found a nil value in a slice")
+				}
 				if relatedNode, err := Serialize(sliceValue.Interface(), db); err != nil {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
 					edge := MakeEdge(db)
+					// we set the edge index to denote it as a slice
+					edge.Index = i
+					edge.Name = relatedSchema.Name
 					// we link the edge to the nodes
 					edge.FromTo(node, relatedNode)
 				}

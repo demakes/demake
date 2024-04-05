@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"regexp"
 )
@@ -20,7 +18,7 @@ func DB(settings *sites.Settings) (orm.DB, error) {
 		return nil, fmt.Errorf("not in test mode, aborting DB setup!")
 	}
 
-	if settings.Database.Type == "sqlite" {
+	if settings.Database.Type == "sqlite3" {
 		// we remove the SQLite database
 		if path := urlRegexp.FindStringSubmatch(settings.Database.Url); path == nil {
 			return nil, fmt.Errorf("cannot parse path")

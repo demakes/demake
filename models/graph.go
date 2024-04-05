@@ -22,7 +22,7 @@ type Edge struct {
 	orm.JSONModel
 	Name   string `json:"name"`
 	Key    string `json:"key"`
-	Index  string `json:"ind" db:"col:ind"`
+	Index  int    `json:"ind" db:"col:ind"`
 	FromID int64  `json:"fromID"`
 	From   *Node  `db:"fk:FromID"`
 	ToID   int64  `json:"toID"`
@@ -35,11 +35,11 @@ func MakeEdge(db func() orm.DB) *Edge {
 
 func (e *Edge) FromTo(from, to *Node) {
 	e.From = from
-	e.To = from
+	e.To = to
 	e.FromID = from.ID
 	e.ToID = to.ID
 	from.Outgoing = append(from.Outgoing, e)
-	from.Incoming = append(from.Incoming, e)
+	to.Incoming = append(to.Incoming, e)
 }
 
 type NodeWithEdge struct {
