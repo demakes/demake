@@ -40,14 +40,17 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// we first register the label model
 	if err := models.Register[Label]("label"); err != nil {
 		t.Fatal(err)
 	}
 
+	// then we register the attribute model
 	if err := models.Register[Attribute]("attribute"); err != nil {
 		t.Fatal(err)
 	}
 
+	// then we register the tag model
 	if err := models.Register[Tag]("tag"); err != nil {
 		t.Fatal(err)
 	}

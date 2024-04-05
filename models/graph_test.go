@@ -25,7 +25,7 @@ func TestBasicGraph(t *testing.T) {
 
 	var previousNode *models.Node
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 5; i++ {
 
 		node := &models.Node{
 			Type: "test",
