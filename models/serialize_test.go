@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
@@ -40,6 +41,8 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	dbf := func() orm.DB { return db }
+
 	// we first register the label model
 	if err := models.Register[Label]("label"); err != nil {
 		t.Fatal(err)
@@ -59,15 +62,28 @@ func TestSerialize(t *testing.T) {
 		Type: "p",
 		Attributes: []*Attribute{
 			&Attribute{
-				Name:   "style",
-				Value:  "font-size:12px",
-				Labels: map[string]*Label{},
+				Name:  "style",
+				Value: "font-size:12px",
+				Labels: map[string]*Label{
+					"test": {
+						Name:  "fooz",
+						Value: "bar",
+					},
+					"baz": {
+						Name:  "foo",
+						Value: "bar",
+					},
+				},
 			},
 			&Attribute{
 				Name:  "class",
 				Value: "bar",
 				Labels: map[string]*Label{
 					"test": {
+						Name:  "foo",
+						Value: "bar",
+					},
+					"baz": {
 						Name:  "foo",
 						Value: "bar",
 					},
@@ -86,7 +102,7 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("expected one regular field")
 	}
 
-	node, err := models.Serialize(tag, func() orm.DB { return db })
+	node, err := models.Serialize(tag, dbf)
 
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +139,7 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("data doesn't match: %v vs. %v", styleEdge.To.JSON.JSON, expected)
 	}
 
-	h := "bbe85f36e4f6d285e0f0cb34a893a63b2478a5abb45db160ad52e6f60801e0f2"
+	h := "5ea9aca60f50b022efed898ed1dac00278d98de4a5b3178d02a469be218486d6"
 	if hex.EncodeToString(classEdge.To.Hash) != h {
 		t.Fatalf("invalid hash, expected '%s', got '%s'", h, hex.EncodeToString(classEdge.To.Hash))
 	}
@@ -136,7 +152,7 @@ func TestSerialize(t *testing.T) {
 	// we modify the second attribute
 	tag.Attributes[1].Name = "classes"
 
-	newNode, err := models.Serialize(tag, func() orm.DB { return db })
+	newNode, err := models.Serialize(tag, dbf)
 
 	if err != nil {
 		t.Fatal(err)
@@ -156,28 +172,57 @@ func TestSerialize(t *testing.T) {
 	}
 
 	// we check the number of nodes in the database
-	nodes, err := orm.Objects[models.Node](func() orm.DB { return db }, map[string]any{})
+	nodes, err := orm.Objects[models.Node](dbf, map[string]any{})
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// we expect 6 nodes as the initial tree has 4 and the new tree replaces
+	// we expect 7 nodes as the initial tree has 5 unique ones and the new tree replaces
 	// 2 nodes with modified ones...
-	if len(nodes) != 6 {
-		t.Fatalf("expected 6 nodes, got %d", len(nodes))
+	if len(nodes) != 7 {
+		t.Fatalf("expected 7 nodes, got %d", len(nodes))
 	}
 
 	// we check the number of nodes in the database
-	edges, err := orm.Objects[models.Edge](func() orm.DB { return db }, map[string]any{})
+	edges, err := orm.Objects[models.Edge](dbf, map[string]any{})
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// we expect 6 edges as each graph has 3
-	if len(edges) != 6 {
-		t.Fatalf("expected 6 edges, got %d", len(edges))
+	if len(edges) != 10 {
+		t.Fatalf("expected 10 edges, got %d", len(edges))
+	}
+
+	// we restore the node from the Graph DB by its ID
+	restoredNode, err := models.GetGraphByID(dbf, node.ID)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if restoredNode.ID != node.ID {
+		t.Fatalf("IDs do not match")
+	}
+
+	// we serialize the original node to JSON
+	nodeData, err := json.MarshalIndent(node, " ", " ")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we serialize the restored node to JSON
+	restoredNodeData, err := json.MarshalIndent(restoredNode, " ", " ")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we compare the data of the restored node with the original one
+	if string(nodeData) != string(restoredNodeData) {
+		t.Fatalf("restored node does not match:\n%s\n----\n%s", string(nodeData), string(restoredNodeData))
 	}
 
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/gospel-sh/gospel/orm"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -154,17 +155,25 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 			if fieldValue.Type().Key().Kind() != reflect.String {
 				return nil, fmt.Errorf("expected a string key")
 			}
-			iter := fieldValue.MapRange()
-			for iter.Next() {
-				mapKey := iter.Key()
-				mapValue := iter.Value()
+
+			keys := make([]string, 0)
+
+			for _, key := range fieldValue.MapKeys() {
+				keys = append(keys, key.Interface().(string))
+			}
+
+			// we sort the keys to make the edge order predictable
+			sort.Strings(keys)
+
+			for _, mapKey := range keys {
+				mapValue := fieldValue.MapIndex(reflect.ValueOf(mapKey))
 				if mapValue.Kind() == reflect.Pointer {
 					mapValue = mapValue.Elem()
 				}
 				if mapValue.Kind() != reflect.Struct {
 					return nil, fmt.Errorf("expected a struct")
 				}
-				if mapValue.IsZero() || mapKey.IsZero() {
+				if mapValue.IsZero() {
 					return nil, fmt.Errorf("found a nil value or key in a map")
 				}
 				if relatedNode, err := Serialize(mapValue.Interface(), db); err != nil {
@@ -174,7 +183,7 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 					// we set the type to map
 					edge.Type = int(Map)
 					// we set the edge key to denote it as a map
-					edge.Key = mapKey.Interface().(string)
+					edge.Key = mapKey
 					edge.Name = relatedSchema.Name
 					// we link the edge to the nodes
 					edge.FromTo(node, relatedNode)

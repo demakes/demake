@@ -12,7 +12,7 @@ type Node struct {
 	Type     string  `json:"type"`
 	Hash     []byte  `json:"hash" db:"pk"`
 	Outgoing []*Edge `json:"outgoing" db:"ignore"`
-	Incoming []*Edge `json:"incoming" db:"ignore"`
+	Incoming []*Edge `json:"-" db:"ignore"`
 }
 
 func MakeNode(db func() orm.DB) *Node {
@@ -65,13 +65,16 @@ type Edge struct {
 	Key    string `json:"key"`
 	Index  int    `json:"index" db:"col:ind"`
 	FromID int64  `json:"fromID"`
-	From   *Node  `db:"fk:FromID" json:"from"`
+	From   *Node  `db:"fk:FromID" json:"-"`
 	ToID   int64  `json:"toID"`
+	Follow bool   `json:"follow"`
 	To     *Node  `db:"fk:ToID" json:"to"`
 }
 
 func MakeEdge(db func() orm.DB) *Edge {
-	return orm.Init(&Edge{}, db)
+	return orm.Init(&Edge{
+		Follow: true,
+	}, db)
 }
 
 func (e *Edge) Save() error {
@@ -95,18 +98,3 @@ func (e *Edge) FromTo(from, to *Node) {
 	from.Outgoing = append(from.Outgoing, e)
 	to.Incoming = append(to.Incoming, e)
 }
-
-type NodeWithEdge struct {
-	Edge *Edge
-	Node *Node
-}
-
-// return the entire graph for a given node
-var query = `
-WITH RECURSIVE
-	graph(name, key, ind, type, data, hash, from_id, to_id)
-	AS (
-		SELECT  '', '', 0, type, data, hash, 0, id from node where id = 6
-		UNION ALL SELECT
-			edge.name, edge.key, edge.ind, node.type, node.data, node.hash, edge.from_id, edge.to_id FROM edge JOIN node ON node.id = edge.to_id JOIN graph ON edge.from_id = graph.to_id) select * from graph;
-`
