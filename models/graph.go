@@ -7,12 +7,25 @@ import (
 
 type Node struct {
 	orm.DBBaseModel
-	orm.JSONModel
-	ID       int64   `json:"-" db:"pk,auto,noOnConflict"`
-	Type     string  `json:"type"`
-	Hash     []byte  `json:"hash" db:"pk"`
-	Outgoing []*Edge `json:"outgoing" db:"ignore"`
-	Incoming []*Edge `json:"-" db:"ignore"`
+	JSON     *orm.JSONMap `json:"data" db:"col:data"`
+	ID       int64        `json:"-" db:"pk,auto,noOnConflict"`
+	Type     string       `json:"type"`
+	Hash     []byte       `json:"hash" db:"pk"`
+	Outgoing Edges        `json:"outgoing" db:"ignore"`
+	Incoming []*Edge      `json:"-" db:"ignore"`
+}
+
+type Edges []*Edge
+
+func (e Edges) FilterByName(name string) Edges {
+	filteredEdges := make(Edges, 0, len(e))
+
+	for _, edge := range e {
+		if edge.Name == name {
+			filteredEdges = append(filteredEdges, edge)
+		}
+	}
+	return filteredEdges
 }
 
 func MakeNode(db func() orm.DB) *Node {
@@ -59,16 +72,16 @@ func (n *Node) SaveTree() error {
 
 type Edge struct {
 	orm.DBModel
-	orm.JSONModel
-	Name   string `json:"name"`
-	Type   int    `json:"type"`
-	Key    string `json:"key"`
-	Index  int    `json:"index" db:"col:ind"`
-	FromID int64  `json:"fromID"`
-	From   *Node  `db:"fk:FromID" json:"-"`
-	ToID   int64  `json:"toID"`
-	Follow bool   `json:"follow"`
-	To     *Node  `db:"fk:ToID" json:"to"`
+	JSON   *orm.JSONMap `json:"data" db:"col:data"`
+	Name   string       `json:"name"`
+	Type   int          `json:"type"`
+	Key    string       `json:"key"`
+	Index  int          `json:"index" db:"col:ind"`
+	FromID int64        `json:"fromID"`
+	From   *Node        `db:"fk:FromID" json:"-"`
+	ToID   int64        `json:"toID"`
+	Follow bool         `json:"follow"`
+	To     *Node        `db:"fk:ToID" json:"to"`
 }
 
 func MakeEdge(db func() orm.DB) *Edge {

@@ -13,7 +13,12 @@ import (
 
 type Tag struct {
 	Type       string       `json:"type"`
+	Meta       Meta         `json:"meta"`
 	Attributes []*Attribute `json:"attributes"`
+}
+
+type Meta struct {
+	Language string `json:"language"`
 }
 
 type Attribute struct {
@@ -53,6 +58,11 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// then we register the meta model
+	if err := models.Register[Meta]("meta"); err != nil {
+		t.Fatal(err)
+	}
+
 	// then we register the tag model
 	if err := models.Register[Tag]("tag"); err != nil {
 		t.Fatal(err)
@@ -60,6 +70,7 @@ func TestSerialize(t *testing.T) {
 
 	tag := &Tag{
 		Type: "p",
+		Meta: Meta{Language: "de"},
 		Attributes: []*Attribute{
 			&Attribute{
 				Name:  "style",
@@ -114,19 +125,19 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("data doesn't match: %v vs. %v", node.JSON.JSON, expected)
 	}
 
-	if len(node.Outgoing) != 2 {
-		t.Fatalf("expected one outgoing edge, got %d", len(node.Outgoing))
+	if len(node.Outgoing) != 3 {
+		t.Fatalf("expected 3 outgoing edges, got %d", len(node.Outgoing))
 	}
 
-	styleEdge := node.Outgoing[0]
-	classEdge := node.Outgoing[1]
+	styleEdge := node.Outgoing[1]
+	classEdge := node.Outgoing[2]
 
 	if styleEdge.Index != 0 {
 		t.Fatalf("expected 0 index")
 	}
 
 	if classEdge.Index != 1 {
-		t.Fatalf("expected 1 index")
+		t.Fatalf("expected 1 index, got %d", classEdge.Index)
 	}
 
 	expected = map[string]any{"name": "style", "value": "font-size:12px"}
@@ -158,16 +169,19 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// we revert the change
+	tag.Attributes[1].Name = "class"
+
 	// we store the node a second time
 	if err := newNode.SaveTree(); err != nil {
 		t.Fatalf("cannot store new node a second time")
 	}
 
-	if newNode.Outgoing[0].To.ID != node.Outgoing[0].To.ID {
+	if newNode.Outgoing[1].To.ID != node.Outgoing[1].To.ID {
 		t.Fatalf("expected IDs of first attribute to match")
 	}
 
-	if newNode.Outgoing[1].To.ID == node.Outgoing[1].To.ID {
+	if newNode.Outgoing[2].To.ID == node.Outgoing[2].To.ID {
 		t.Fatalf("expected IDs of second attribute to diverge")
 	}
 
@@ -178,10 +192,10 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// we expect 7 nodes as the initial tree has 5 unique ones and the new tree replaces
+	// we expect 8 nodes as the initial tree has 6 unique ones and the new tree replaces
 	// 2 nodes with modified ones...
-	if len(nodes) != 7 {
-		t.Fatalf("expected 7 nodes, got %d", len(nodes))
+	if len(nodes) != 8 {
+		t.Fatalf("expected 8 nodes, got %d", len(nodes))
 	}
 
 	// we check the number of nodes in the database
@@ -191,8 +205,8 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(edges) != 10 {
-		t.Fatalf("expected 10 edges, got %d", len(edges))
+	if len(edges) != 12 {
+		t.Fatalf("expected 12 edges, got %d", len(edges))
 	}
 
 	// we restore the node from the Graph DB by its ID
@@ -223,6 +237,41 @@ func TestSerialize(t *testing.T) {
 	// we compare the data of the restored node with the original one
 	if string(nodeData) != string(restoredNodeData) {
 		t.Fatalf("restored node does not match:\n%s\n----\n%s", string(nodeData), string(restoredNodeData))
+	}
+
+	restoredModel, err := models.Deserialize(restoredNode)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	restoredTag, ok := restoredModel.(*Tag)
+
+	if !ok {
+		t.Fatalf("expected a tag, got %T", restoredModel)
+	}
+
+	if len(restoredTag.Attributes) != 2 {
+		t.Fatalf("expected 2 attributes, got %d", len(restoredTag.Attributes))
+	}
+
+	// we serialize the original node to JSON
+	tagData, err := json.MarshalIndent(tag, " ", " ")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we serialize the restored node to JSON
+	restoredTagData, err := json.MarshalIndent(restoredTag, " ", " ")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we compare the data of the restored tag with the original one
+	if string(tagData) != string(restoredTagData) {
+		t.Fatalf("restored node does not match:\n%s\n----\n%s", string(tagData), string(restoredTagData))
 	}
 
 }

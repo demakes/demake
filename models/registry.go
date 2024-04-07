@@ -12,18 +12,6 @@ type ModelSchema struct {
 	RelatedSchemas []*RelatedModelSchema
 }
 
-// Serializes a given model into a node structure
-func (m *ModelSchema) Serialize(model any) *Node {
-	/*
-		- Create a node
-		- Serialize all fields into the nodes JSON data
-		- Serialize all related models into nodes
-		- Create outgoing edges for the related models
-		- Combine the outgoing edges and node
-	*/
-	return nil
-}
-
 type Relation int
 
 const (
@@ -51,7 +39,7 @@ type ModelSchemaField struct {
 }
 
 // maps a given type name to a struct
-var Registry = []*ModelSchema{}
+var Registry = map[string]*ModelSchema{}
 
 func SchemaForType(modelType reflect.Type) *ModelSchema {
 	// if this is a pointer to a struct, we "unpoint" it first
@@ -194,7 +182,7 @@ func Register[T any](name string) error {
 	if schema, err := MakeModelSchema(nt, name); err != nil {
 		return err
 	} else {
-		Registry = append(Registry, schema)
+		Registry[name] = schema
 		return nil
 	}
 }
