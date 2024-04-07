@@ -100,7 +100,7 @@ WITH RECURSIVE
 			graph.edge_follow = true AND
 			edge.deleted_at IS NULL
 		ORDER BY
-			edge.to_id -- we sort in a depth-first way
+			edge.to_id, edge.ind, edge.key -- we sort in a depth-first way
 	)
 SELECT * FROM graph;
 `
