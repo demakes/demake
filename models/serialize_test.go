@@ -239,30 +239,28 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("restored node does not match:\n%s\n----\n%s", string(nodeData), string(restoredNodeData))
 	}
 
+	// we deserialize the restored node into a tag
 	restoredModel, err := models.Deserialize(restoredNode)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// we verify that it's indeed a tag
 	restoredTag, ok := restoredModel.(*Tag)
 
 	if !ok {
 		t.Fatalf("expected a tag, got %T", restoredModel)
 	}
 
-	if len(restoredTag.Attributes) != 2 {
-		t.Fatalf("expected 2 attributes, got %d", len(restoredTag.Attributes))
-	}
-
-	// we serialize the original node to JSON
+	// we serialize the original tag to JSON
 	tagData, err := json.MarshalIndent(tag, " ", " ")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// we serialize the restored node to JSON
+	// we serialize the restored tag to JSON
 	restoredTagData, err := json.MarshalIndent(restoredTag, " ", " ")
 
 	if err != nil {
