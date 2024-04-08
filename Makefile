@@ -23,11 +23,11 @@ test-sqlite-in-memory:
 
 bench-sqlite:
 	echo "Benchmarking SQLite"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test ./... -bench=. -run=NONE -count=1 -parallel=1
+	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test -bench . -count=1 -parallel=1 ./...
 
 bench-postgres:
 	echo "Benchmarking Postgres"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test ./... -bench=. -run=NONE -count=1 -parallel=1
+	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench . -count=1 -parallel=1 ./...
 
 test: test-sqlite test-postgres
 

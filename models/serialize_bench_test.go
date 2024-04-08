@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites"
@@ -179,6 +180,82 @@ func BenchmarkDeepTree(b *testing.B) {
 
 		if err := tx.Commit(); err != nil {
 			b.Fatal(err)
+		}
+
+		b.StopTimer()
+
+	}
+
+}
+
+func BenchmarkDeepRead(b *testing.B) {
+
+	if err := registerModels(); err != nil {
+		b.Fatal(err)
+	}
+
+	settings, err := sites.LoadSettings()
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	tag := &Tag{
+		Type:       "p",
+		Meta:       Meta{Language: "de"},
+		Attributes: []*Attribute{},
+		Children:   []*Tag{},
+	}
+
+	currentChild := tag
+
+	// we create a tree with a depth of 51 nodes
+	for i := 0; i < 100; i++ {
+		childTag := &Tag{
+			Type:       fmt.Sprintf("h%d", i),
+			Attributes: []*Attribute{},
+			Children:   []*Tag{},
+			Meta:       Meta{Language: "de"},
+		}
+		currentChild.Children = append(currentChild.Children, childTag)
+		currentChild = childTag
+	}
+
+	db, err := kt.DB(settings)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	dbf := func() orm.DB { return db }
+
+	node, err := models.Serialize(tag, dbf)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// we store the node a first time
+	if err := node.SaveTree(); err != nil {
+		b.Fatalf("cannot store node")
+	}
+
+	b.ResetTimer()
+	b.StopTimer()
+
+	for i := 0; i < b.N; i++ {
+
+		b.StartTimer()
+
+		// we restore the node from the Graph DB by its ID
+		restoredNode, err := models.GetGraphByID(dbf, node.ID)
+
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		if !bytes.Equal(restoredNode.Hash, node.Hash) {
+			b.Fatal("nodes don't match")
 		}
 
 		b.StopTimer()
