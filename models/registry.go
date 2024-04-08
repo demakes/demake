@@ -59,9 +59,10 @@ func SchemaFor(model any) *ModelSchema {
 	return SchemaForType(reflect.TypeOf(model))
 }
 
-func MakeModelSchema(model any, name string) (*ModelSchema, error) {
+func MakeModelSchema(model any, schema *ModelSchema) error {
 
 	modelType := reflect.TypeOf(model)
+	schema.Type = modelType
 
 	// if this is a pointer to a struct, we "unpoint" it first
 	if modelType.Kind() == reflect.Pointer {
@@ -69,7 +70,7 @@ func MakeModelSchema(model any, name string) (*ModelSchema, error) {
 	}
 
 	if modelType.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("model isn't a struct")
+		return fmt.Errorf("model isn't a struct")
 	}
 
 	fields := make([]*ModelSchemaField, 0, modelType.NumField())
@@ -121,7 +122,7 @@ fieldsLoop:
 					Type:        Map,
 					Name:        fieldName,
 					Field:       field.Name,
-					Optional:    pointer,
+					Optional:    true,
 					ModelSchema: mapSchema,
 				})
 				continue fieldsLoop
@@ -148,7 +149,7 @@ fieldsLoop:
 					Type:        Slice,
 					Name:        fieldName,
 					Field:       field.Name, // to do: determine field
-					Optional:    pointer,
+					Optional:    true,
 					ModelSchema: sliceSchema,
 				})
 				continue fieldsLoop
@@ -165,12 +166,11 @@ fieldsLoop:
 		})
 	}
 
-	return &ModelSchema{
-		Type:           modelType,
-		Fields:         fields,
-		RelatedSchemas: related,
-		Name:           name,
-	}, nil
+	// we update the schema fields
+	schema.Fields = fields
+	schema.RelatedSchemas = related
+
+	return nil
 }
 
 func Register[T any](name string) error {
@@ -179,10 +179,14 @@ func Register[T any](name string) error {
 		// we skip this
 		return nil
 	}
-	if schema, err := MakeModelSchema(nt, name); err != nil {
+	// we pre-register the schema to allow self-referencing types
+	Registry[name] = &ModelSchema{
+		Name: name,
+	}
+	if err := MakeModelSchema(nt, Registry[name]); err != nil {
+		delete(Registry, name)
 		return err
 	} else {
-		Registry[name] = schema
 		return nil
 	}
 }

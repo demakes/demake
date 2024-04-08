@@ -14,6 +14,7 @@ import (
 type Tag struct {
 	Type       string       `json:"type"`
 	Meta       Meta         `json:"meta"`
+	Children   []*Tag       `json:"children"`
 	Attributes []*Attribute `json:"attributes"`
 }
 
@@ -32,7 +33,36 @@ type Label struct {
 	Value string `json:"value"`
 }
 
+func registerModels() error {
+
+	// we first register the label model
+	if err := models.Register[Label]("label"); err != nil {
+		return err
+	}
+
+	// then we register the attribute model
+	if err := models.Register[Attribute]("attribute"); err != nil {
+		return err
+	}
+
+	// then we register the meta model
+	if err := models.Register[Meta]("meta"); err != nil {
+		return err
+	}
+
+	// then we register the tag model
+	if err := models.Register[Tag]("tag"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func TestSerialize(t *testing.T) {
+
+	if err := registerModels(); err != nil {
+		t.Fatal(err)
+	}
 
 	settings, err := sites.LoadSettings()
 
@@ -47,26 +77,6 @@ func TestSerialize(t *testing.T) {
 	}
 
 	dbf := func() orm.DB { return db }
-
-	// we first register the label model
-	if err := models.Register[Label]("label"); err != nil {
-		t.Fatal(err)
-	}
-
-	// then we register the attribute model
-	if err := models.Register[Attribute]("attribute"); err != nil {
-		t.Fatal(err)
-	}
-
-	// then we register the meta model
-	if err := models.Register[Meta]("meta"); err != nil {
-		t.Fatal(err)
-	}
-
-	// then we register the tag model
-	if err := models.Register[Tag]("tag"); err != nil {
-		t.Fatal(err)
-	}
 
 	tag := &Tag{
 		Type: "p",

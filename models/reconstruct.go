@@ -1,8 +1,11 @@
 package models
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
+	"sort"
+	"text/template"
 )
 
 // Data structure to describe the combined edge and node data
@@ -28,8 +31,28 @@ type GraphData struct {
 	EdgeFollow    bool
 }
 
+type SortedGraphData []*GraphData
+
+func (a SortedGraphData) Len() int {
+	return len(a)
+}
+
+func (a SortedGraphData) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a SortedGraphData) Less(i, j int) bool {
+	return a[i].Index < a[j].Index
+}
+
 // returns the entire graph for a given node stopping at non-follow edges
 var graphQuery = `
+{{$pgx:=false}}
+
+{{if eq .DBType "pgx"}}
+    {{$pgx = true}}
+{{end}}
+
 WITH RECURSIVE
 	graph( -- all rows here must appear below as well
 		name,
@@ -51,27 +74,27 @@ WITH RECURSIVE
 		edge_follow)
 	AS (
 		SELECT
-			'',
-			'',
+			''{{if $pgx}}::character varying{{end}},
+			''{{if $pgx}}::character varying{{end}},
 			0,
 			type,
 			data,
 			hash,
 			created_at,
 			updated_at,
-			0,
+			0{{if $pgx}}::bigint{{end}},
 			id,
-			0,
-			0,
-			NULL,
-			NULL,
+			0{{if $pgx}}::bigint{{end}},
+			0{{if $pgx}}::bigint{{end}},
+			NULL{{if $pgx}}::BYTEA{{end}},
+			NULL{{if $pgx}}::JSONB{{end}},
 			current_timestamp,
 			current_timestamp,
 			true
 		FROM
 			node
 		WHERE
-			id = ?
+			id = $1
 		UNION ALL SELECT
 			edge.name,
 			edge.key,
@@ -99,8 +122,12 @@ WITH RECURSIVE
 		WHERE
 			graph.edge_follow = true AND
 			edge.deleted_at IS NULL
+		{{if $pgx}}
+			-- Postgres does not support ordering of CTEs
+		{{else}}
 		ORDER BY
 			edge.to_id, edge.ind, edge.key -- we sort in a depth-first way
+		{{end}}
 	)
 SELECT * FROM graph;
 `
@@ -182,9 +209,39 @@ func reconstructNode(db func() orm.DB, data []*GraphData) (*Node, []*GraphData, 
 
 }
 
+type QueryContext struct {
+	DBType string
+}
+
+func sortNodes(id int64, dataByID map[int64][]*GraphData) []*GraphData {
+	sort.Sort(SortedGraphData(dataByID[id]))
+	sortedList := make([]*GraphData, 0, 0)
+	for _, data := range dataByID[id] {
+		sortedList = append(sortedList, data)
+		// we add all the child nodes to the list
+		sortedList = append(sortedList, sortNodes(data.ToID, dataByID)...)
+	}
+	return sortedList
+}
+
 func GetGraphByID(db func() orm.DB, id int64) (*Node, error) {
 
-	graphDataList, err := orm.Query[GraphData](db, graphQuery, id)
+	settings := db().Settings()
+	templ, err := template.New("graph").Parse(graphQuery)
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot load query template: %v", err)
+	}
+
+	context := &QueryContext{DBType: settings.Type}
+
+	output := bytes.NewBuffer(nil)
+
+	if err := templ.Execute(output, context); err != nil {
+		return nil, err
+	}
+
+	graphDataList, err := orm.Query[GraphData](db, output.String(), id)
 
 	if err != nil {
 		return nil, err
@@ -194,7 +251,15 @@ func GetGraphByID(db func() orm.DB, id int64) (*Node, error) {
 		return nil, fmt.Errorf("not found")
 	}
 
-	node, _, err := reconstructNode(db, graphDataList)
+	dataByID := make(map[int64][]*GraphData)
+
+	// we generate a map of all edges
+	for _, node := range graphDataList {
+		dataByID[node.FromID] = append(dataByID[node.FromID], node)
+	}
+
+	// we add the edges in depth-first traversal
+	node, _, err := reconstructNode(db, sortNodes(0, dataByID))
 
 	return node, err
 }

@@ -1,0 +1,8 @@
+{
+	"test": true,
+	"database": {
+		"name":     "klaro",
+		"type":     "sqlite3",
+		"url":      ":memory:?_foreign_keys=on&parseTime=true"
+	}
+}

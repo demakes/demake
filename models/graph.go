@@ -12,7 +12,7 @@ type Node struct {
 	Type     string       `json:"type"`
 	Hash     []byte       `json:"hash" db:"pk"`
 	Outgoing Edges        `json:"outgoing" db:"ignore"`
-	Incoming []*Edge      `json:"-" db:"ignore"`
+	Incoming Edges        `json:"-" db:"ignore"`
 }
 
 type Edges []*Edge

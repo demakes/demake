@@ -50,5 +50,17 @@ func DB(settings *sites.Settings) (orm.DB, error) {
 		return nil, fmt.Errorf("cannot create migration manager: %w", err)
 	}
 
+	if settings.Database.Type == "sqlite3" {
+		// we enable WAL mode, which drastically improves query performance
+		if _, err := db.Exec(`PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;`); err != nil {
+			return nil, err
+		}
+	} else {
+		// we migrate down to version 0
+		if err := manager.Migrate(0); err != nil {
+			return nil, err
+		}
+	}
+
 	return db, manager.Migrate(manager.LatestVersion())
 }
