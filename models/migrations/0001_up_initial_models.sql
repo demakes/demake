@@ -21,9 +21,9 @@ CREATE TABLE node (
     hash bytea NOT NULL,
     type character varying NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone,
     deleted_at timestamp without time zone,
-    data jsonb
+    data bytea
 );
 
 
@@ -71,9 +71,9 @@ CREATE TABLE edge (
     type integer,
     follow bool DEFAULT TRUE,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone,
     deleted_at timestamp without time zone,
-    data jsonb
+    data bytea
 );
 
 {{ if not $sqlite}}
@@ -95,7 +95,9 @@ ALTER TABLE ONLY edge
 
 CREATE INDEX ix_edge_created_at ON edge (created_at);
 CREATE INDEX ix_edge_deleted_at ON edge (deleted_at);
+CREATE INDEX ix_edge_follow ON edge (follow);
 CREATE UNIQUE INDEX ix_edge_ext_id ON edge (ext_id) WHERE (deleted_at IS NULL);
+CREATE UNIQUE INDEX ix_edge_unique ON edge (from_id, to_id, name, ind, key, type) WHERE (deleted_at IS NULL);
 CREATE INDEX ix_edge_name ON edge (name);
 CREATE INDEX ix_edge_key ON edge (key);
 CREATE INDEX ix_edge_ind ON edge (ind);

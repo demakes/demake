@@ -1,7 +1,6 @@
 package models_test
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites"
@@ -68,8 +67,6 @@ func BenchmarkSimpleSave(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		dbf := func() orm.DB { return db }
-
 		b.StartTimer()
 
 		tx, err := db.Begin()
@@ -78,14 +75,14 @@ func BenchmarkSimpleSave(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		node, err := models.Serialize(tag, dbf)
+		node, err := models.Serialize(tag)
 
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		// we store the node a first time
-		if err := node.SaveTree(); err != nil {
+		if err := node.SaveTree(db); err != nil {
 			b.Fatalf("cannot store node")
 		}
 
@@ -143,8 +140,6 @@ func BenchmarkDeepTree(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		dbf := func() orm.DB { return db }
-
 		b.StartTimer()
 
 		tx, err := db.Begin()
@@ -153,28 +148,28 @@ func BenchmarkDeepTree(b *testing.B) {
 			b.Fatal(err)
 		}
 
-		node, err := models.Serialize(tag, dbf)
+		node, err := models.Serialize(tag)
 
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		// we store the node a first time
-		if err := node.SaveTree(); err != nil {
+		if err := node.SaveTree(db); err != nil {
 			b.Fatalf("cannot store node")
 		}
 
 		// we modify the innermost child
 		currentChild.Type = "foo"
 
-		newNode, err := models.Serialize(tag, dbf)
+		newNode, err := models.Serialize(tag)
 
 		if err != nil {
 			b.Fatal(err)
 		}
 
 		// we store the node a first time
-		if err := newNode.SaveTree(); err != nil {
+		if err := newNode.SaveTree(db); err != nil {
 			b.Fatalf("cannot store node")
 		}
 
@@ -229,14 +224,14 @@ func BenchmarkDeepRead(b *testing.B) {
 
 	dbf := func() orm.DB { return db }
 
-	node, err := models.Serialize(tag, dbf)
+	node, err := models.Serialize(tag)
 
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	// we store the node a first time
-	if err := node.SaveTree(); err != nil {
+	if err := node.SaveTree(db); err != nil {
 		b.Fatalf("cannot store node")
 	}
 
@@ -248,14 +243,105 @@ func BenchmarkDeepRead(b *testing.B) {
 		b.StartTimer()
 
 		// we restore the node from the Graph DB by its ID
-		restoredNode, err := models.GetGraphByID(dbf, node.ID)
+		_, err := models.GetGraphByID(dbf, node.ID)
 
 		if err != nil {
 			b.Fatal(err)
 		}
 
-		if !bytes.Equal(restoredNode.Hash, node.Hash) {
-			b.Fatal("nodes don't match")
+		b.StopTimer()
+
+	}
+
+}
+
+func BenchmarkDeepAndWideRead(b *testing.B) {
+
+	if err := registerModels(); err != nil {
+		b.Fatal(err)
+	}
+
+	settings, err := sites.LoadSettings()
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	root := &Tag{
+		Type:       "root",
+		Meta:       Meta{Language: "de"},
+		Attributes: []*Attribute{},
+		Children:   []*Tag{},
+	}
+
+	for i := 0; i < 100; i++ {
+		tag := &Tag{
+			Type:       "p",
+			Meta:       Meta{Language: "de"},
+			Attributes: []*Attribute{},
+			Children:   []*Tag{},
+		}
+
+		currentChild := tag
+
+		// we create a deep tree
+		for j := 0; j < 200; j++ {
+			childTag := &Tag{
+				Type:       fmt.Sprintf("h%d", i),
+				Attributes: []*Attribute{},
+				Children:   []*Tag{},
+				Meta:       Meta{Language: "de"},
+			}
+			currentChild.Children = append(currentChild.Children, childTag)
+			currentChild = childTag
+		}
+
+		root.Children = append(root.Children, tag)
+	}
+
+	db, err := kt.DB(settings)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	dbf := func() orm.DB { return db }
+
+	node, err := models.Serialize(root)
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	tx, err := db.Begin()
+
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// we store the node a first time
+	if err := node.SaveTree(tx); err != nil {
+		b.Fatalf("cannot store node")
+	}
+
+	if err := tx.Commit(); err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+	b.StopTimer()
+
+	fmt.Println("Retrieving...")
+
+	for i := 0; i < b.N; i++ {
+
+		b.StartTimer()
+
+		// we restore the node from the Graph DB by its ID
+		_, err := models.GetGraphByID(dbf, node.ID)
+
+		if err != nil {
+			b.Fatal(err)
 		}
 
 		b.StopTimer()

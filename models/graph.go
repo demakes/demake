@@ -1,18 +1,29 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
+	"time"
 )
 
 type Node struct {
 	orm.DBBaseModel
-	JSON     *orm.JSONMap `json:"data" db:"col:data"`
-	ID       int64        `json:"-" db:"pk,auto,noOnConflict"`
-	Type     string       `json:"type"`
-	Hash     []byte       `json:"hash" db:"pk"`
-	Outgoing Edges        `json:"outgoing" db:"ignore"`
-	Incoming Edges        `json:"-" db:"ignore"`
+	Data     []byte `json:"data" db:"col:data"`
+	ID       int64  `json:"id" db:"pk,auto,noOnConflict"`
+	Type     string `json:"type"`
+	Hash     []byte `json:"hash" db:"pk"`
+	Outgoing Edges  `json:"outgoing" db:"ignore"`
+	Incoming Edges  `json:"-" db:"ignore"`
+}
+
+func (n *Node) SetData(data any) error {
+	if bytes, err := json.Marshal(data); err != nil {
+		return err
+	} else {
+		n.Data = bytes
+		return nil
+	}
 }
 
 type Edges []*Edge
@@ -28,43 +39,58 @@ func (e Edges) FilterByName(name string) Edges {
 	return filteredEdges
 }
 
-func MakeNode(db func() orm.DB) *Node {
-	return orm.Init(&Node{}, db)
-}
+var insertNodeQuery = `
+INSERT INTO node
+	(
+		hash,
+		type,
+		data,
+		updated_at
+	)
+VALUES
+	(
+		$1,
+		$2,
+		$3,
+		NULL
+	)
+ON CONFLICT
+	(hash)
+WHERE
+	deleted_at IS NULL
+DO UPDATE SET updated_at = $4
+RETURNING
+	id, updated_at, created_at
+`
 
-func (n *Node) Save() error {
-	return orm.Save(n)
-}
+func (n *Node) SaveTree(db orm.Transaction) error {
 
-func (n *Node) Refresh() (bool, error) {
-	if err := orm.LoadOne(n, map[string]any{"hash": n.Hash}); err == nil {
-		return true, nil
-	} else if err == orm.NotFound {
-		return false, nil
-	} else {
-		return false, err
-	}
-}
+	n.UpdatedAt = &orm.Time{time.Now()}
 
-func (n *Node) SaveTree() error {
-	if ok, err := n.Refresh(); err != nil {
-		return fmt.Errorf("cannot check for node existence")
-	} else if !ok {
-		// this node doesn't exist yet, we save it
-		if err := n.Save(); err != nil {
-			return fmt.Errorf("cannot save node: %v", err)
+	if rows, err := db.Query(insertNodeQuery, n.Hash, n.Type, n.Data, n.UpdatedAt.Get()); err != nil {
+		return fmt.Errorf("cannot check for node existence. %v", err)
+	} else if rows.Next() {
+		if err := rows.Scan(&n.ID, &n.UpdatedAt, &n.CreatedAt); err != nil {
+			return fmt.Errorf("cannot scan ID: %v", err)
+		}
+		rows.Close()
+		if n.UpdatedAt != nil {
+			// the node already exists
+			return nil
 		}
 		// we also need to save all outgoing edges
 		for _, edge := range n.Outgoing {
 			// we first save the related node and its descendants
-			if err := edge.To.SaveTree(); err != nil {
+			if err := edge.To.SaveTree(db); err != nil {
 				return err
 			}
 			// then we save the edge knowing all nodes exist
-			if err := edge.Save(); err != nil {
+			if err := edge.Save(db); err != nil {
 				return fmt.Errorf("cannot save edge: %v", err)
 			}
 		}
+	} else {
+		rows.Close()
 	}
 	return nil
 
@@ -72,26 +98,69 @@ func (n *Node) SaveTree() error {
 
 type Edge struct {
 	orm.DBModel
-	JSON   *orm.JSONMap `json:"data" db:"col:data"`
-	Name   string       `json:"name"`
-	Type   int          `json:"type"`
-	Key    string       `json:"key"`
-	Index  int          `json:"index" db:"col:ind"`
-	FromID int64        `json:"fromID"`
-	From   *Node        `db:"fk:FromID" json:"-"`
-	ToID   int64        `json:"toID"`
-	Follow bool         `json:"follow"`
-	To     *Node        `db:"fk:ToID" json:"to"`
+	Data   []byte `json:"data" db:"col:data"`
+	Name   string `json:"name"`
+	Type   int    `json:"type"`
+	Key    string `json:"key"`
+	Index  int    `json:"index" db:"col:ind"`
+	FromID int64  `json:"fromID"`
+	ToID   int64  `json:"toID"`
+	Follow bool   `json:"follow"`
+	From   *Node  `db:"fk:FromID" json:"-"`
+	To     *Node  `db:"fk:ToID" json:"to"`
 }
 
-func MakeEdge(db func() orm.DB) *Edge {
-	return orm.Init(&Edge{
+var insertEdgeQuery = `
+INSERT INTO edge
+	(
+		ext_id,
+		from_id,
+		to_id,
+		name,
+		type,
+		ind,
+		key,
+		data,
+		updated_at
+	)
+VALUES
+	(
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7,
+		$8,
+		NULL
+	)
+ON CONFLICT
+	(from_id, to_id, name, ind, key, type)
+WHERE
+	deleted_at IS NULL
+DO UPDATE SET updated_at = $9
+RETURNING
+	id, updated_at, created_at
+`
+
+func MakeEdge() *Edge {
+	return &Edge{
 		Follow: true,
-	}, db)
+	}
 }
 
-func (e *Edge) Save() error {
-	if e.From == nil || e.To.ID == 0 {
+func (e *Edge) SetData(data any) error {
+	if bytes, err := json.Marshal(data); err != nil {
+		return err
+	} else {
+		e.Data = bytes
+		return nil
+	}
+}
+
+func (e *Edge) Save(db orm.Transaction) error {
+	if e.From == nil || e.From.ID == 0 {
 		return fmt.Errorf("'From' node missing or doesn't have an ID")
 	}
 	if e.To == nil || e.To.ID == 0 {
@@ -100,7 +169,29 @@ func (e *Edge) Save() error {
 	// we update 'From' and 'To' IDs
 	e.FromID = e.From.ID
 	e.ToID = e.To.ID
-	return orm.Save(e)
+
+	if e.ExtID == nil {
+		e.ExtID = &orm.UUID{}
+		if err := e.ExtID.Generate(); err != nil {
+			return err
+		}
+	}
+
+	e.UpdatedAt = &orm.Time{time.Now()}
+
+	if rows, err := db.Query(insertEdgeQuery, e.ExtID.Bytes(), e.FromID, e.ToID, e.Name, e.Type, e.Index, e.Key, e.Data, time.Now().UTC()); err != nil {
+		return fmt.Errorf("cannot check for node existence. %v", err)
+	} else {
+		defer rows.Close()
+		if rows.Next() {
+			if err := rows.Scan(&e.ID, &e.UpdatedAt, &e.CreatedAt); err != nil {
+				return fmt.Errorf("cannot scan ID: %v", err)
+			}
+		} else {
+			return fmt.Errorf("cannot insert edge")
+		}
+	}
+	return nil
 }
 
 func (e *Edge) FromTo(from, to *Node) {

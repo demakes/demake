@@ -2,6 +2,7 @@ KLARO_TEST_SETTINGS_SQLITE ?= `readlink -f settings/test/sqlite.json`
 KLARO_TEST_SETTINGS_SQLITE_IN_MEMORY ?= `readlink -f settings/test/sqlite-in-memory.json`
 KLARO_TEST_SETTINGS_POSTGRES ?= `readlink -f settings/test/postgres.json`
 
+TESTARGS ?= ""
 all: build install
 
 .PHONY: build install
@@ -27,7 +28,7 @@ bench-sqlite:
 
 bench-postgres:
 	echo "Benchmarking Postgres"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench . -count=1 -parallel=1 ./...
+	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench . -count=1 -parallel=1 $(TESTARGS) ./...
 
 test: test-sqlite test-postgres
 

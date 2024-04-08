@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -17,26 +18,11 @@ func Deserialize(node *Node) (any, error) {
 	model := modelPtr.Elem()
 
 	// first, we deserialize the normal data fields
-	for _, field := range schema.Fields {
-		structField := model.FieldByName(field.Field)
-		fieldData, ok := node.JSON.JSON[field.Name]
-		if !ok && !field.Optional {
-			return nil, fmt.Errorf("field '%s' missing", field.Name)
-		}
-		dataField := reflect.ValueOf(fieldData)
-		dataType := dataField.Type()
-		structType := structField.Type()
-		if !dataType.AssignableTo(structType) {
-			if !dataType.ConvertibleTo(structType) {
-				return nil, fmt.Errorf("invalid type (%s expected, but got %s) for field '%s'", structType.Name(), dataType.Name(), field.Name)
-			}
-			// we convert and set
-			structField.Set(dataField.Convert(structType))
-		} else {
-			structField.Set(dataField)
-		}
+	if err := json.Unmarshal(node.Data, modelPtr.Interface()); err != nil {
+		return nil, err
 	}
 
+	// then we deserialize related nodes
 	for _, relatedSchema := range schema.RelatedSchemas {
 		structField := model.FieldByName(relatedSchema.Field)
 		structType := structField.Type()
@@ -80,7 +66,7 @@ func Deserialize(node *Node) (any, error) {
 				structField.Set(modelValue)
 			}
 		case Slice:
-			// to do: sort the edges!
+			// to do: check the edge indices to ensure they're sorted correctly
 			for _, edge := range edges {
 				if model, err := Deserialize(edge.To); err != nil {
 					return nil, fmt.Errorf("cannot deserialize related node '%s'(%d): %v", relatedSchema.Name, edge.Index, err)

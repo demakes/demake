@@ -33,7 +33,10 @@ func TestBasicGraph(t *testing.T) {
 		}
 
 		orm.Init(node, func() orm.DB { return db })
-		node.JSON.Update(map[string]any{"foo": "bar"})
+
+		if err := node.SetData(map[string]any{"foo": "bar"}); err != nil {
+			t.Fatal(err)
+		}
 
 		if err := orm.Save(node); err != nil {
 			t.Fatal(err)

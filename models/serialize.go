@@ -2,72 +2,11 @@ package models
 
 import (
 	"fmt"
-	"github.com/gospel-sh/gospel/orm"
 	"reflect"
-	"regexp"
 	"sort"
-	"strings"
 )
 
-// https://gist.github.com/stoewer/fbe273b711e6a06315d19552dd4d33e6f
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-func ToSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
-
-type Tag struct {
-	Name  string
-	Value string
-	Flag  bool
-}
-
-func HasTag(tags []Tag, key string) bool {
-	for _, t := range tags {
-		if t.Name == key {
-			return true
-		}
-	}
-	return false
-}
-
-func GetTag(tags []Tag, key string) (Tag, bool) {
-	for _, t := range tags {
-		if t.Name == key {
-			return t, true
-		}
-	}
-	return Tag{}, false
-}
-
-func ExtractTags(field reflect.StructField, name string) []Tag {
-	tags := make([]Tag, 0)
-	if dbValue, ok := field.Tag.Lookup(name); ok {
-		strTags := strings.Split(dbValue, ",")
-		for _, tag := range strTags {
-			kv := strings.Split(dbValue, ":")
-			if len(kv) == 1 {
-				tags = append(tags, Tag{
-					Name:  tag,
-					Value: "",
-					Flag:  true,
-				})
-			} else {
-				tags = append(tags, Tag{
-					Name:  kv[0],
-					Value: kv[1],
-					Flag:  false,
-				})
-			}
-		}
-	}
-	return tags
-}
-
-func Serialize(model any, db func() orm.DB) (*Node, error) {
+func Serialize(model any) (*Node, error) {
 
 	hash := MakeHash()
 
@@ -91,7 +30,7 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 		return nil, fmt.Errorf("unknown node type: %T", model)
 	}
 
-	node := MakeNode(db)
+	node := &Node{}
 	data := map[string]any{}
 
 	for _, field := range schema.Fields {
@@ -132,10 +71,10 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 			if fieldValue.Kind() != reflect.Struct {
 				return nil, fmt.Errorf("expected a struct")
 			}
-			if relatedNode, err := Serialize(fieldValue.Interface(), db); err != nil {
+			if relatedNode, err := Serialize(fieldValue.Interface()); err != nil {
 				return nil, fmt.Errorf("cannot serialize related model: %v", err)
 			} else {
-				edge := MakeEdge(db)
+				edge := MakeEdge()
 				// we set the type to struct
 				edge.Type = int(Struct)
 				// we set the edge name
@@ -176,10 +115,10 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 				if mapValue.IsZero() {
 					return nil, fmt.Errorf("found a nil value or key in a map")
 				}
-				if relatedNode, err := Serialize(mapValue.Interface(), db); err != nil {
+				if relatedNode, err := Serialize(mapValue.Interface()); err != nil {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
-					edge := MakeEdge(db)
+					edge := MakeEdge()
 					// we set the type to map
 					edge.Type = int(Map)
 					// we set the edge key to denote it as a map
@@ -210,10 +149,10 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 				if sliceValue.IsZero() {
 					return nil, fmt.Errorf("found a nil value in a slice")
 				}
-				if relatedNode, err := Serialize(sliceValue.Interface(), db); err != nil {
+				if relatedNode, err := Serialize(sliceValue.Interface()); err != nil {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
-					edge := MakeEdge(db)
+					edge := MakeEdge()
 					// we set the type to slice
 					edge.Type = int(Slice)
 					// we set the edge index to denote it as a slice
@@ -236,7 +175,7 @@ func Serialize(model any, db func() orm.DB) (*Node, error) {
 	// we set the node type
 	node.Type = schema.Name
 
-	if err := node.JSON.Update(data); err != nil {
+	if err := node.SetData(data); err != nil {
 		return nil, fmt.Errorf("cannot set data: %v", err)
 	}
 

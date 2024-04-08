@@ -7,7 +7,6 @@ import (
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
 	kt "github.com/klaro-org/sites/testing"
-	"reflect"
 	"testing"
 )
 
@@ -101,12 +100,12 @@ func TestSerialize(t *testing.T) {
 				Value: "bar",
 				Labels: map[string]*Label{
 					"test": {
-						Name:  "foo",
+						Name:  "fam",
 						Value: "bar",
 					},
 					"baz": {
-						Name:  "foo",
-						Value: "bar",
+						Name:  "flip",
+						Value: "flop",
 					},
 				},
 			},
@@ -123,16 +122,16 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("expected one regular field")
 	}
 
-	node, err := models.Serialize(tag, dbf)
+	node, err := models.Serialize(tag)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expected := map[string]any{"type": "p"}
+	expected := `{"type":"p"}`
 
-	if !reflect.DeepEqual(node.JSON.JSON, expected) {
-		t.Fatalf("data doesn't match: %v vs. %v", node.JSON.JSON, expected)
+	if string(node.Data) != expected {
+		t.Fatalf("data doesn't match: %s vs. %s", string(node.Data), string(expected))
 	}
 
 	if len(node.Outgoing) != 3 {
@@ -150,73 +149,25 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("expected 1 index, got %d", classEdge.Index)
 	}
 
-	expected = map[string]any{"name": "style", "value": "font-size:12px"}
-	if !reflect.DeepEqual(styleEdge.To.JSON.JSON, expected) {
-		t.Fatalf("data doesn't match: %v vs. %v", styleEdge.To.JSON.JSON, expected)
+	expected = `{"name":"style","value":"font-size:12px"}`
+
+	if string(styleEdge.To.Data) != expected {
+		t.Fatalf("data doesn't match: %s vs. %s", styleEdge.To.Data, expected)
 	}
 
-	expected = map[string]any{"name": "class", "value": "bar"}
-	if !reflect.DeepEqual(classEdge.To.JSON.JSON, expected) {
-		t.Fatalf("data doesn't match: %v vs. %v", styleEdge.To.JSON.JSON, expected)
+	expected = `{"name":"class","value":"bar"}`
+	if string(classEdge.To.Data) != expected {
+		t.Fatalf("data doesn't match: %s vs. %s", string(styleEdge.To.Data), expected)
 	}
 
-	h := "5ea9aca60f50b022efed898ed1dac00278d98de4a5b3178d02a469be218486d6"
+	h := "e9cbbae51a559560adff9444f2b5e6b3967496887c11d52edfc59b1d848cc3bb"
 	if hex.EncodeToString(classEdge.To.Hash) != h {
 		t.Fatalf("invalid hash, expected '%s', got '%s'", h, hex.EncodeToString(classEdge.To.Hash))
 	}
 
 	// we store the node a first time
-	if err := node.SaveTree(); err != nil {
-		t.Fatalf("cannot store node")
-	}
-
-	// we modify the second attribute
-	tag.Attributes[1].Name = "classes"
-
-	newNode, err := models.Serialize(tag, dbf)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// we revert the change
-	tag.Attributes[1].Name = "class"
-
-	// we store the node a second time
-	if err := newNode.SaveTree(); err != nil {
-		t.Fatalf("cannot store new node a second time")
-	}
-
-	if newNode.Outgoing[1].To.ID != node.Outgoing[1].To.ID {
-		t.Fatalf("expected IDs of first attribute to match")
-	}
-
-	if newNode.Outgoing[2].To.ID == node.Outgoing[2].To.ID {
-		t.Fatalf("expected IDs of second attribute to diverge")
-	}
-
-	// we check the number of nodes in the database
-	nodes, err := orm.Objects[models.Node](dbf, map[string]any{})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// we expect 8 nodes as the initial tree has 6 unique ones and the new tree replaces
-	// 2 nodes with modified ones...
-	if len(nodes) != 8 {
-		t.Fatalf("expected 8 nodes, got %d", len(nodes))
-	}
-
-	// we check the number of nodes in the database
-	edges, err := orm.Objects[models.Edge](dbf, map[string]any{})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(edges) != 12 {
-		t.Fatalf("expected 12 edges, got %d", len(edges))
+	if err := node.SaveTree(db); err != nil {
+		t.Fatalf("cannot store node: %v", err)
 	}
 
 	// we restore the node from the Graph DB by its ID
@@ -280,6 +231,55 @@ func TestSerialize(t *testing.T) {
 	// we compare the data of the restored tag with the original one
 	if string(tagData) != string(restoredTagData) {
 		t.Fatalf("restored node does not match:\n%s\n----\n%s", string(tagData), string(restoredTagData))
+	}
+
+	// we modify the second attribute
+	tag.Attributes[1].Name = "classes"
+
+	newNode, err := models.Serialize(tag)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we revert the change
+	tag.Attributes[1].Name = "class"
+
+	// we store the node a second time
+	if err := newNode.SaveTree(db); err != nil {
+		t.Fatalf("cannot store new node a second time")
+	}
+
+	if newNode.Outgoing[1].To.ID != node.Outgoing[1].To.ID {
+		t.Fatalf("expected IDs of first attribute to match")
+	}
+
+	if newNode.Outgoing[2].To.ID == node.Outgoing[2].To.ID {
+		t.Fatalf("expected IDs of second attribute to diverge")
+	}
+
+	// we check the number of nodes in the database
+	nodes, err := orm.Objects[models.Node](dbf, map[string]any{})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we expect 10 nodes as the initial tree has 8 unique ones and the new tree replaces
+	// 2 nodes with modified ones...
+	if len(nodes) != 10 {
+		t.Fatalf("expected 10 nodes, got %d", len(nodes))
+	}
+
+	// we check the number of nodes in the database
+	edges, err := orm.Objects[models.Edge](dbf, map[string]any{})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(edges) != 12 {
+		t.Fatalf("expected 12 edges, got %d", len(edges))
 	}
 
 }
