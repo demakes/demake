@@ -8,7 +8,7 @@ import (
 )
 
 type Edge struct {
-	orm.DBBaseModel
+	orm.DBModel
 	Data   []byte `json:"data" db:"col:data"`
 	Name   string `json:"name"`
 	Type   int    `json:"type"`
