@@ -33,7 +33,10 @@ func main() {
 			os.Exit(-1)
 		}
 	case "run":
-		runServer()
+		if err := sites.Run(); err != nil {
+			fmt.Printf("error running: %v", err)
+			os.Exit(-1)
+		}
 	default:
 		fmt.Printf("unknown command: %s\n", cmd)
 		os.Exit(-1)

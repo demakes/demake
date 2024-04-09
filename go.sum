@@ -1,6 +1,8 @@
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
+github.com/getworf/worf-go v0.0.0-20240131141613-a1aafe24d392 h1:BG8Xv5bvc3ojJj6xnQxV92/fe7X8PlUjEhyDbvWcub4=
+github.com/getworf/worf-go v0.0.0-20240131141613-a1aafe24d392/go.mod h1:0s4qOEAsJzJsaTborJKyVCLfyJ4ISme0xWHPuURrAWo=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gospel-sh/gospel v0.0.0-20230425201659-2e93bd89da38 h1:MjuEECw1T1g3IBbskS1INfgWHkf9vmnZAWtTUAPz4TM=
