@@ -51,7 +51,7 @@ func runMigrations() error {
 		return err
 	}
 
-	db, err := orm.Connect("linearize", settings.Database)
+	db, err := orm.Connect("klaro", settings.Database)
 
 	if err != nil {
 		return err

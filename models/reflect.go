@@ -16,31 +16,33 @@ func ToSnakeCase(str string) string {
 	return strings.ToLower(snake)
 }
 
+type Tags []Tag
+
 type Tag struct {
 	Name  string
 	Value string
 	Flag  bool
 }
 
-func HasTag(tags []Tag, key string) bool {
-	for _, t := range tags {
-		if t.Name == key {
+func (t Tags) Has(key string) bool {
+	for _, tag := range t {
+		if tag.Name == key {
 			return true
 		}
 	}
 	return false
 }
 
-func GetTag(tags []Tag, key string) (Tag, bool) {
-	for _, t := range tags {
-		if t.Name == key {
-			return t, true
+func (t Tags) Get(key string) (Tag, bool) {
+	for _, tag := range t {
+		if tag.Name == key {
+			return tag, true
 		}
 	}
 	return Tag{}, false
 }
 
-func ExtractTags(field reflect.StructField, name string) []Tag {
+func ExtractTags(field reflect.StructField, name string) Tags {
 	tags := make([]Tag, 0)
 	if dbValue, ok := field.Tag.Lookup(name); ok {
 		strTags := strings.Split(dbValue, ",")

@@ -7,6 +7,7 @@ import (
 type Site struct {
 	orm.DBModel `db:"table:project"`
 	orm.JSONModel
+	HeadID      *int64 `db:"head_id"`
 	Name        string
 	Description string
 }

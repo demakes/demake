@@ -82,14 +82,14 @@ fieldsLoop:
 		tags := ExtractTags(field, "graph")
 		pointer := false
 
-		if HasTag(tags, "ignore") {
+		if tags.Has("ignore") {
 			// we ignore this field
 			continue
 		}
 
 		fieldName := ToSnakeCase(field.Name)
 
-		if nameTag, ok := GetTag(tags, "name"); ok {
+		if nameTag, ok := tags.Get("name"); ok {
 			fieldName = nameTag.Value
 		} else {
 			// we look for a JSON name tag
@@ -126,6 +126,8 @@ fieldsLoop:
 					ModelSchema: mapSchema,
 				})
 				continue fieldsLoop
+			} else if tags.Has("include") {
+				panic("include")
 			}
 		case reflect.Struct:
 			// struct
@@ -139,6 +141,8 @@ fieldsLoop:
 					ModelSchema: structSchema,
 				})
 				continue fieldsLoop
+			} else if tags.Has("include") {
+				panic("include")
 			}
 		case reflect.Slice:
 			// slice
@@ -151,6 +155,15 @@ fieldsLoop:
 					Field:       field.Name, // to do: determine field
 					Optional:    true,
 					ModelSchema: sliceSchema,
+				})
+				continue fieldsLoop
+			} else if tags.Has("include") {
+				related = append(related, &RelatedModelSchema{
+					Type:        Slice,
+					Name:        fieldName,
+					Field:       field.Name,
+					Optional:    true,
+					ModelSchema: nil,
 				})
 				continue fieldsLoop
 			}

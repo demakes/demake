@@ -37,7 +37,14 @@ func Serialize(model any) (*Node, error) {
 		fieldValue := modelValue.FieldByName(field.Field)
 		// we skip zero values
 		if fieldValue.IsZero() {
-			data[field.Name] = nil
+			if fieldValue.CanInterface() {
+				data[field.Name] = fieldValue.Interface()
+				if err := hash.Add([]any{field.Name, data[field.Name]}); err != nil {
+					return nil, fmt.Errorf("error hashing field %s: %v", field.Field, err)
+				}
+			} else {
+				data[field.Name] = nil
+			}
 			continue
 		}
 		// this shouldn't happen, but can...
@@ -45,7 +52,7 @@ func Serialize(model any) (*Node, error) {
 			return nil, fmt.Errorf("cannot interface: %s", field.Field)
 		}
 		v := fieldValue.Interface()
-		if err := hash.Add(v); err != nil {
+		if err := hash.Add([]any{field.Name, v}); err != nil {
 			return nil, fmt.Errorf("error hashing field %s: %v", field.Field, err)
 		}
 		data[field.Name] = v
@@ -140,11 +147,14 @@ func Serialize(model any) (*Node, error) {
 			}
 			for i := 0; i < fieldValue.Len(); i++ {
 				sliceValue := fieldValue.Index(i)
+				if sliceValue.Kind() == reflect.Interface {
+					sliceValue = sliceValue.Elem()
+				}
 				if sliceValue.Kind() == reflect.Pointer {
 					sliceValue = sliceValue.Elem()
 				}
 				if sliceValue.Kind() != reflect.Struct {
-					return nil, fmt.Errorf("expected a struct")
+					return nil, fmt.Errorf("expected a struct, got %T (%v)", sliceValue.Interface(), sliceValue.Kind())
 				}
 				if sliceValue.IsZero() {
 					return nil, fmt.Errorf("found a nil value in a slice")

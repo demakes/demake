@@ -17,8 +17,13 @@ CREATE TABLE site (
     ext_id bytea NOT NULL,
     description character varying DEFAULT '' NOT NULL,
     name character varying NOT NULL,
+    {{ if $sqlite }}
+    head_id INTEGER REFERENCES node(id),
+    {{else}}
+    head_id bigint REFERENCES node(id),
+    {{end}}
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone,
     deleted_at timestamp without time zone,
     data jsonb
 );

@@ -27,7 +27,7 @@ func NewSite(c Context) Element {
 		sites, err := getSites(c)
 
 		if err != nil {
-			error.Set("cannot load sites")
+			error.Set(Fmt("cannot load sites: %v", err))
 			return
 		}
 
@@ -43,6 +43,26 @@ func NewSite(c Context) Element {
 		}
 
 		orm.Init(newSite, db)
+
+		head := Div(
+			P("This is a test"),
+			Strong("strong"),
+			Route("/test(/[a-z]+)?", Strong("another test")),
+		)
+
+		node, err := models.Serialize(head)
+
+		if err != nil {
+			error.Set(Fmt("cannot create head: %v", err))
+			return
+		}
+
+		if err := node.SaveTree(db()); err != nil {
+			error.Set(Fmt("cannot save tree: %v", err))
+			return
+		}
+
+		newSite.HeadID = &node.ID
 
 		if err := newSite.Save(); err != nil {
 			error.Set("cannot save site")
