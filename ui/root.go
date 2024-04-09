@@ -1,9 +1,12 @@
 package ui
 
 import (
+	"encoding/hex"
+	"fmt"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites/auth"
+	"github.com/klaro-org/sites/models"
 )
 
 func SetDB(c Context, db orm.DB) {
@@ -70,15 +73,12 @@ var CSS = MakeStylesheet(
 
 func MainContent(c Context) Element {
 
-	profileProvider := UseProfileProvider(c)
 	router := UseRouter(c)
 
 	// if the user isn't logged in, we redirect to the login screen
-	if user, err := profileProvider.Get(c.Request()); err != nil {
+	if UseUser(c) == nil {
 		router.RedirectTo("/login")
 		return nil
-	} else {
-		SetUser(c, user)
 	}
 
 	return AuthorizedContent(c)
@@ -115,12 +115,116 @@ func AuthorizedContent(c Context) Element {
 
 func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) Element {
 
+	dbf := func() orm.DB { return db }
+
 	return func(c Context) Element {
 
 		SetDB(c, db)
 		SetProfileProvider(c, profileProvider)
 
+		// if the user isn't logged in, we redirect to the login screen
+		if user, err := profileProvider.Get(c.Request()); err == nil {
+			SetUser(c, user)
+		}
+
 		router := UseRouter(c)
+
+		site := router.Match(
+			c,
+			Route(`/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
+
+				id, err := hex.DecodeString(siteID)
+
+				if err != nil {
+					return Div("invalid ID")
+				}
+
+				if UseUser(c) == nil {
+					router.RedirectTo("/login")
+					return nil
+				}
+
+				site := orm.Init(&models.Site{}, dbf)
+
+				if err := site.ByExtID(id); err != nil {
+					return Div("cannot find site")
+				}
+
+				if site.HeadID == nil {
+					return Div("no head")
+				}
+
+				graph, err := models.GetGraphByID(dbf, *site.HeadID)
+
+				if err != nil {
+					return Div("cannot load graph")
+				}
+
+				fmt.Println("Done loading...")
+
+				tree, err := models.Deserialize(graph)
+
+				if err != nil {
+					return Div("cannot deserialize")
+				}
+
+				fmt.Println("Done deserializing...")
+
+				htmlElement, ok := tree.(*HTMLElement)
+
+				if !ok {
+					return Div("not HTML")
+				}
+
+				return htmlElement
+
+				/*
+
+					entries := []any{}
+
+					for i:=0; i<100000; i++ {
+						entries = append(entries, Li(Fmt("%d", i)))
+					}
+
+					htmlElement.Children = []any{P("this is the only child"), Strong("or is it?"), Ul(entries)}
+
+					newTree, err := models.Serialize(htmlElement)
+
+					if err != nil {
+						return Div("cannot serialize")
+					}
+
+					tx, _ := db.Begin()
+
+					if err := newTree.SaveTree(tx); err != nil {
+						tx.Rollback()
+						return Div("cannot save new tree")
+					}
+
+					tx.Commit()
+
+					site.HeadID = &newTree.ID
+
+					if err := site.Save(); err != nil {
+						return Div("cannot update site head")
+					}
+
+				*/
+
+				element, err := htmlElement.Generate(c)
+
+				if err != nil {
+					return Div("cannot generate")
+				}
+
+				return element.(Element)
+
+			}),
+		)
+
+		if site != nil {
+			return site
+		}
 
 		return F(
 			Doctype("html"),

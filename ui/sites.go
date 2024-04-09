@@ -100,7 +100,10 @@ func SiteList(c Context) Element {
 
 	for i, site := range sites {
 		siteItems[i] = Li(
-			site.Name,
+			A(
+				Href(Fmt("/sites/%s", site.ExtID.Hex())),
+				site.Name,
+			),
 			" // ",
 			site.CreatedAt.String(),
 			" // ",
