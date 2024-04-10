@@ -3,6 +3,7 @@ KLARO_TEST_SETTINGS_SQLITE_IN_MEMORY ?= `readlink -f settings/test/sqlite-in-mem
 KLARO_TEST_SETTINGS_POSTGRES ?= `readlink -f settings/test/postgres.json`
 
 TESTARGS ?= ""
+BENCHARGS ?= "."
 all: build install
 
 .PHONY: build install
@@ -24,11 +25,11 @@ test-sqlite-in-memory:
 
 bench-sqlite:
 	echo "Benchmarking SQLite"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test -bench . -count=1 -parallel=1 ./...
+	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test -bench $(BENCHARGS) -count=1 -parallel=1 ./...
 
 bench-postgres:
 	echo "Benchmarking Postgres"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench . -count=1 -parallel=1 $(TESTARGS) ./...
+	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench $(BENCHARGS) -count=1 -parallel=1 $(TESTARGS) ./...
 
 test: test-sqlite test-postgres
 

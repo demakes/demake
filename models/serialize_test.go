@@ -13,6 +13,7 @@ import (
 type Tag struct {
 	Type       string       `json:"type"`
 	Meta       Meta         `json:"meta"`
+	Value      any          `json:"value"`
 	Children   []*Tag       `json:"children"`
 	Attributes []*Attribute `json:"attributes"`
 }
@@ -118,8 +119,8 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("expected a schema")
 	}
 
-	if len(tagSchema.Fields) != 1 {
-		t.Fatalf("expected one regular field")
+	if len(tagSchema.Fields) != 2 {
+		t.Fatalf("expected two regular fields")
 	}
 
 	node, err := models.Serialize(tag)
@@ -128,7 +129,7 @@ func TestSerialize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected := `{"type":"p"}`
+	expected := `{"type":"p","value":null}`
 
 	if string(node.Data) != expected {
 		t.Fatalf("data doesn't match: %s vs. %s", string(node.Data), string(expected))
@@ -160,7 +161,7 @@ func TestSerialize(t *testing.T) {
 		t.Fatalf("data doesn't match: %s vs. %s", string(styleEdge.To.Data), expected)
 	}
 
-	h := "e9cbbae51a559560adff9444f2b5e6b3967496887c11d52edfc59b1d848cc3bb"
+	h := "faf218cb19d48110fe8be0ac889d9d56056db79803d0f769ad68776d233e0901"
 	if hex.EncodeToString(classEdge.To.Hash) != h {
 		t.Fatalf("invalid hash, expected '%s', got '%s'", h, hex.EncodeToString(classEdge.To.Hash))
 	}

@@ -6,7 +6,9 @@ import (
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
 	kt "github.com/klaro-org/sites/testing"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func BenchmarkSimpleSave(b *testing.B) {
@@ -255,6 +257,20 @@ func BenchmarkDeepRead(b *testing.B) {
 
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
+
 func BenchmarkDeepAndWideRead(b *testing.B) {
 
 	if err := registerModels(); err != nil {
@@ -278,6 +294,7 @@ func BenchmarkDeepAndWideRead(b *testing.B) {
 		tag := &Tag{
 			Type:       "p",
 			Meta:       Meta{Language: "de"},
+			Value:      RandStringRunes(10000),
 			Attributes: []*Attribute{},
 			Children:   []*Tag{},
 		}
@@ -288,6 +305,7 @@ func BenchmarkDeepAndWideRead(b *testing.B) {
 		for j := 0; j < 200; j++ {
 			childTag := &Tag{
 				Type:       fmt.Sprintf("h%d", i),
+				Value:      RandStringRunes(10000),
 				Attributes: []*Attribute{},
 				Children:   []*Tag{},
 				Meta:       Meta{Language: "de"},
@@ -330,8 +348,6 @@ func BenchmarkDeepAndWideRead(b *testing.B) {
 
 	b.ResetTimer()
 	b.StopTimer()
-
-	fmt.Println("Retrieving...")
 
 	for i := 0; i < b.N; i++ {
 

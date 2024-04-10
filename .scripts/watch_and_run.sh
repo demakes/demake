@@ -7,9 +7,9 @@ kill_and_run() {
   if [ $pid -ne 0 ]; then
     kill -SIGTERM $pid
   else
-    killall -SIGTERM klaro
+    killall -SIGTERM sites
   fi
-  klaro run  &
+  sites run  &
   pid=$!
 }
 
