@@ -36,7 +36,7 @@ func shadowedButton(radius float64, size int) []any {
 
 func Login(c Context) Element {
 
-	form := MakeFormData(c)
+	form := MakeFormData(c, "login", POST)
 	email := form.Var("email", "")
 	password := form.Var("password", "")
 	error := Var(c, "")
