@@ -15,12 +15,20 @@ func NewSite(c Context) Element {
 
 	db := func() orm.DB { return UseDB(c) }
 
+	formData := MakeFormData(c, "newSite", POST)
+
 	error := Var[string](c, "")
-	name := Var[string](c, "")
-	onSubmit := Func[any](c, func() {
+	name := formData.Var("name", "")
+	hostname := formData.Var("hostname", "")
+	onSubmit := func() {
 
 		if len(name.Get()) == 0 {
 			error.Set("please enter a name")
+			return
+		}
+
+		if len(name.Get()) == 0 {
+			error.Set("please enter a hostname")
 			return
 		}
 
@@ -32,28 +40,42 @@ func NewSite(c Context) Element {
 		}
 
 		for _, site := range sites {
-			if site.Name == name.Get() {
-				error.Set("a site with this name already exists")
+			if site.Hostname == hostname.Get() || site.Name == name.Get() {
+				error.Set("a site with this name or hostname already exists")
 				return
 			}
 		}
 
 		newSite := &models.Site{
-			Name: name.Get(),
+			Name:     name.Get(),
+			Hostname: hostname.Get(),
 		}
 
 		orm.Init(newSite, db)
 
-		head := Div(
+		dom := Div(
 			P("This is a test"),
-			Strong("strong"),
+			Strong("strongs"),
 			Route("/test(/[a-z]+)?", Strong("another test")),
+			Route("/blub(/[a-z]+)?", Strong("blub")),
+			Route("/foo(/[a-z]+)?", Strong("foo")),
 		)
 
-		node, err := models.Serialize(head)
+		site := &models.SiteGraph{
+			Meta: models.SiteMeta{
+				Title: models.TranslatedString{
+					Translations: map[string]string{"de": "Meine Webseite"},
+				},
+				Domain: "japh.de",
+			},
+			DOM:     *dom,
+			Plugins: []models.SitePlugin{&models.BlogPlugin{ArticlesPerPage: 10}},
+		}
+
+		node, err := models.Serialize(site)
 
 		if err != nil {
-			error.Set(Fmt("cannot create head: %v", err))
+			error.Set(Fmt("cannot create site: %v", err))
 			return
 		}
 
@@ -69,16 +91,16 @@ func NewSite(c Context) Element {
 			return
 		}
 
-		UseRouter(c).RedirectTo("/sites")
+		UseRouter(c).RedirectTo("/admin/sites")
+	}
 
-	})
+	formData.OnSubmit(onSubmit)
 
 	return Div(
-		Form(
-			Method("POST"),
-			OnSubmit(onSubmit),
+		formData.Form(
 			If(error.Get() != "", error.Get()),
-			Input(Value(name)),
+			Input(Placeholder("name"), Value(name)),
+			Input(Placeholder("hostname"), Value(hostname)),
 			Button(
 				Type("submit"),
 				"create site",
@@ -101,7 +123,7 @@ func SiteList(c Context) Element {
 	for i, site := range sites {
 		siteItems[i] = Li(
 			A(
-				Href(Fmt("/sites/%s", site.ExtID.Hex())),
+				Href(Fmt("/admin/sites/%s", site.ExtID.Hex())),
 				site.Name,
 			),
 			" // ",
@@ -115,7 +137,7 @@ func SiteList(c Context) Element {
 		Ul(
 			siteItems,
 		),
-		A(Href("/sites/new"), "new site"),
+		A(Href("/admin/sites/new"), "new site"),
 	)
 }
 

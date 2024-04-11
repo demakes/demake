@@ -42,6 +42,11 @@ type ModelSchemaField struct {
 var Registry = map[string]*ModelSchema{}
 
 func SchemaForType(modelType reflect.Type) *ModelSchema {
+
+	if modelType == nil {
+		return nil
+	}
+
 	// if this is a pointer to a struct, we "unpoint" it first
 	if modelType.Kind() == reflect.Pointer {
 		modelType = modelType.Elem()
@@ -63,6 +68,10 @@ func MakeModelSchema(model any, schema *ModelSchema) error {
 
 	modelType := reflect.TypeOf(model)
 	schema.Type = modelType
+
+	if modelType == nil {
+		return fmt.Errorf("model type is undefined (probably an interface)")
+	}
 
 	// if this is a pointer to a struct, we "unpoint" it first
 	if modelType.Kind() == reflect.Pointer {
@@ -96,6 +105,10 @@ fieldsLoop:
 			jsonTags := ExtractTags(field, "json")
 			for _, jsonTag := range jsonTags {
 				if jsonTag.Flag {
+					if jsonTag.Name == "-" {
+						// we ignore this field
+						continue fieldsLoop
+					}
 					fieldName = jsonTag.Name
 					break
 				}
@@ -127,7 +140,14 @@ fieldsLoop:
 				})
 				continue fieldsLoop
 			} else if tags.Has("include") {
-				panic("include")
+				related = append(related, &RelatedModelSchema{
+					Type:        Map,
+					Name:        fieldName,
+					Field:       field.Name,
+					Optional:    true,
+					ModelSchema: nil,
+				})
+				continue fieldsLoop
 			}
 		case reflect.Struct:
 			// struct
@@ -142,7 +162,25 @@ fieldsLoop:
 				})
 				continue fieldsLoop
 			} else if tags.Has("include") {
-				panic("include")
+				related = append(related, &RelatedModelSchema{
+					Type:        Struct,
+					Name:        fieldName,
+					Field:       field.Name,
+					Optional:    true,
+					ModelSchema: nil,
+				})
+				continue fieldsLoop
+			}
+		case reflect.Interface:
+			if tags.Has("include") {
+				related = append(related, &RelatedModelSchema{
+					Type:        Struct,
+					Name:        fieldName,
+					Field:       field.Name,
+					Optional:    true,
+					ModelSchema: nil,
+				})
+				continue fieldsLoop
 			}
 		case reflect.Slice:
 			// slice
@@ -186,8 +224,15 @@ fieldsLoop:
 	return nil
 }
 
+func MustRegister[T any](name string) {
+	if err := Register[T](name); err != nil {
+		panic(err)
+	}
+}
+
 func Register[T any](name string) error {
 	nt := *new(T)
+
 	if existingSchema := SchemaFor(nt); existingSchema != nil {
 		// we skip this
 		return nil

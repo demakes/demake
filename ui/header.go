@@ -134,7 +134,7 @@ func MainHeader(c Context) Element {
 						),
 					),
 				),
-				Li(A(Href("/sites"), "Sites", If(tab == "sites", Class("is-active")))),
+				Li(A(Href("/admin/sites"), "Sites", If(tab == "sites", Class("is-active")))),
 				Li(
 					Styles(
 						FlexGrow(1),

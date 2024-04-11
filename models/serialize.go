@@ -71,15 +71,16 @@ func Serialize(model any) (*Node, error) {
 
 		switch relatedSchema.Type {
 		case Struct:
-			// if this is a pointer to a struct, we "unpoint" it first
-			if fieldValue.Kind() == reflect.Pointer {
+			// we might have an interface that points to a pointer that points to a struct
+			// so we dereference here as much as possible to obtain a struct value
+			for fieldValue.Kind() == reflect.Pointer || fieldValue.Kind() == reflect.Interface {
 				fieldValue = fieldValue.Elem()
 			}
 			if fieldValue.Kind() != reflect.Struct {
-				return nil, fmt.Errorf("expected a struct")
+				return nil, fmt.Errorf("%s: expected a struct, got %v", relatedSchema.Name, fieldValue.Kind())
 			}
 			if relatedNode, err := Serialize(fieldValue.Interface()); err != nil {
-				return nil, fmt.Errorf("cannot serialize related model: %v", err)
+				return nil, fmt.Errorf("cannot serialize related model %s: %v", relatedSchema.Name, err)
 			} else {
 				edge := MakeEdge()
 				// we set the type to struct
@@ -119,9 +120,6 @@ func Serialize(model any) (*Node, error) {
 				if mapValue.Kind() != reflect.Struct {
 					return nil, fmt.Errorf("expected a struct")
 				}
-				if mapValue.IsZero() {
-					return nil, fmt.Errorf("found a nil value or key in a map")
-				}
 				if relatedNode, err := Serialize(mapValue.Interface()); err != nil {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)
 				} else {
@@ -155,9 +153,6 @@ func Serialize(model any) (*Node, error) {
 				}
 				if sliceValue.Kind() != reflect.Struct {
 					return nil, fmt.Errorf("expected a struct, got %T (%v)", sliceValue.Interface(), sliceValue.Kind())
-				}
-				if sliceValue.IsZero() {
-					return nil, fmt.Errorf("found a nil value in a slice")
 				}
 				if relatedNode, err := Serialize(sliceValue.Interface()); err != nil {
 					return nil, fmt.Errorf("cannot serialize related model: %v", err)

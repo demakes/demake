@@ -10,6 +10,17 @@ import (
 	"testing"
 )
 
+type Plugin interface {
+	Editor() any
+}
+
+type Site struct {
+	Plugins []Plugin `json:"plugins" graph:"include"`
+	Name    string   `json:"name"`
+	Domain  string   `json:"domain"`
+	Root    *Tag     `json:"root"`
+}
+
 type Tag struct {
 	Type       string       `json:"type"`
 	Meta       Meta         `json:"meta"`
@@ -55,7 +66,71 @@ func registerModels() error {
 		return err
 	}
 
+	if err := models.Register[Site]("site"); err != nil {
+		return err
+	}
+
+	if err := models.Register[RoutesPlugin]("routesPlugin"); err != nil {
+		return err
+	}
+
+	if err := models.Register[BlogPlugin]("blogPlugin"); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+type RoutesPlugin struct {
+	Prefix string `json:"prefix"`
+}
+
+type BlogPlugin struct {
+	Title string `json:"title"`
+}
+
+func (b *BlogPlugin) Editor() any {
+	return "bar"
+}
+
+func (r *RoutesPlugin) Editor() any {
+	return "foo"
+}
+
+func TestSite(t *testing.T) {
+
+	if err := registerModels(); err != nil {
+		t.Fatal(err)
+	}
+
+	site := &Site{
+		Plugins: []Plugin{&RoutesPlugin{Prefix: "/test"}, &BlogPlugin{Title: "My fancy blog"}},
+	}
+
+	node, err := models.Serialize(site)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	restoredSite, err := models.DeserializeType[Site](node)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(restoredSite.Plugins) != 2 {
+		t.Fatalf("expected one plugin")
+	}
+
+	if restoredSite.Plugins[0].(*RoutesPlugin).Prefix != "/test" {
+		t.Fatalf("prefix doesn't match")
+	}
+
+	if restoredSite.Plugins[1].(*BlogPlugin).Title != "My fancy blog" {
+		t.Fatalf("title doesn't match")
+	}
+
 }
 
 func TestSerialize(t *testing.T) {
@@ -202,17 +277,10 @@ func TestSerialize(t *testing.T) {
 	}
 
 	// we deserialize the restored node into a tag
-	restoredModel, err := models.Deserialize(restoredNode)
+	restoredTag, err := models.DeserializeType[Tag](restoredNode)
 
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	// we verify that it's indeed a tag
-	restoredTag, ok := restoredModel.(*Tag)
-
-	if !ok {
-		t.Fatalf("expected a tag, got %T", restoredModel)
 	}
 
 	// we serialize the original tag to JSON

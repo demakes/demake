@@ -56,8 +56,8 @@ func Deserialize(node *Node) (any, error) {
 				return nil, fmt.Errorf("cannot deserialize related node '%s': %v", relatedSchema.Name, err)
 			} else {
 				modelValue := reflect.ValueOf(model)
-				if structType.Kind() != reflect.Pointer {
-					// this isn't a pointer
+				if structType.Kind() != reflect.Pointer && structType.Kind() != reflect.Interface {
+					// this value can't accept a pointer to a struct
 					modelValue = modelValue.Elem()
 				}
 				if !modelValue.Type().AssignableTo(structType) {
@@ -83,4 +83,14 @@ func Deserialize(node *Node) (any, error) {
 	}
 
 	return modelPtr.Interface(), nil
+}
+
+func DeserializeType[T any](node *Node) (*T, error) {
+	if obj, err := Deserialize(node); err != nil {
+		return nil, err
+	} else if t, ok := obj.(*T); ok {
+		return t, nil
+	} else {
+		return nil, fmt.Errorf("unexpected type: %T", obj)
+	}
 }

@@ -17,6 +17,7 @@ CREATE TABLE site (
     ext_id bytea NOT NULL,
     description character varying DEFAULT '' NOT NULL,
     name character varying NOT NULL,
+    hostname character varying NOT NULL,
     {{ if $sqlite }}
     head_id INTEGER REFERENCES node(id),
     {{else}}
@@ -45,6 +46,7 @@ ALTER TABLE ONLY site
 
 {{ end }}
 
+CREATE UNIQUE INDEX ix_site_hostname ON site(hostname);
 CREATE INDEX ix_site_created_at ON site (created_at);
 CREATE INDEX ix_site_deleted_at ON site (deleted_at);
 CREATE UNIQUE INDEX ix_site_ext_id ON site (ext_id);

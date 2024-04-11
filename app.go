@@ -5,15 +5,67 @@ import (
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites/auth"
+	"github.com/klaro-org/sites/models"
 	"github.com/klaro-org/sites/ui"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
 var userProfileSettings = map[string]any{
 	"type": "worf",
 	"url":  "http://localhost:5000/v1",
+}
+
+type MainServer struct {
+	settings  *Settings
+	appServer *Server
+	db        orm.DB
+}
+
+func (m *MainServer) ServeSite(site *models.Site, w http.ResponseWriter, r *http.Request) {
+	appServer := MakeServer(&App{
+		Root:         ui.ServeSite(m.db, site),
+		StaticPrefix: "/static",
+	})
+
+	appServer.ServeHTTP(w, r)
+
+}
+
+func (m *MainServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	dbf := func() orm.DB { return m.db }
+
+	if strings.HasPrefix(r.URL.Path, "/admin") {
+		// we serve the admin UI
+		m.appServer.ServeHTTP(w, r)
+		return
+	}
+
+	site := &models.Site{}
+
+	orm.Init(site, dbf)
+
+	hostnameAndPort := r.Host
+	hostname := strings.Split(hostnameAndPort, ":")[0]
+
+	if err := site.ByHostname(hostname); err != nil {
+		if err == orm.NotFound {
+			fmt.Fprintf(w, "unknown site")
+			w.Header().Add("content-type", "text/plain")
+			w.WriteHeader(404)
+			return
+		}
+		// this is an unexpected error
+		fmt.Fprintf(w, "error loading site")
+		w.Header().Add("content-type", "text/plain")
+		w.WriteHeader(500)
+		return
+	}
+
+	m.ServeSite(site, w, r)
 }
 
 func Run() error {
@@ -43,14 +95,19 @@ func Run() error {
 		}
 	}
 
-	server := MakeServer(&App{
-		Root:         ui.Root(db, profileProvider),
-		StaticPrefix: "/static",
-	})
-
-	if err := server.Start(); err != nil {
-		return err
+	mainServer := &http.Server{
+		Addr: ":8001",
+		Handler: &MainServer{
+			db:       db,
+			settings: settings,
+			appServer: MakeServer(&App{
+				Root:         ui.Root(db, profileProvider),
+				StaticPrefix: "/static",
+			}),
+		},
 	}
+
+	go mainServer.ListenAndServe()
 
 	wait()
 

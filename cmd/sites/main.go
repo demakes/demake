@@ -3,14 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites"
 	"github.com/klaro-org/sites/models"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -66,40 +63,4 @@ func runMigrations() error {
 	slog.Info("Running migrations...", slog.Int("version", manager.LatestVersion()))
 	return manager.Migrate(manager.LatestVersion())
 
-}
-
-func runServer() {
-
-	el := Div(
-		P("This is a test"),
-		func(c Context) (any, error) {
-			return P("another one"), nil
-		},
-		Strong("strong"),
-		Route("/test(/[a-z]+)?", Strong("another test")),
-	)
-
-	server := MakeServer(&App{
-		StaticPrefix: "/static",
-		Root: func(c Context) Element {
-			if v, err := el.Generate(c); err != nil {
-				return Div(Fmt("error: %v", err))
-			} else if el, ok := v.(Element); !ok {
-				return Div("not an element")
-			} else {
-				return el
-			}
-		},
-	})
-	if err := server.Start(); err != nil {
-		Log.Error("Cannot start server: %v", err)
-	}
-	wait()
-}
-
-func wait() {
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
-	fmt.Println("Blocking, press ctrl+c to continue...")
-	<-done // Will block here until user hits ctrl+c
 }

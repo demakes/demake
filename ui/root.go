@@ -113,6 +113,41 @@ func AuthorizedContent(c Context) Element {
 	)
 }
 
+func ServeSite(db orm.DB, site *models.Site) func(c Context) Element {
+
+	dbf := func() orm.DB { return db }
+
+	return func(c Context) Element {
+
+		if site.HeadID == nil {
+			return Div("no head")
+		}
+
+		graph, err := models.GetGraphByID(dbf, *site.HeadID)
+
+		if err != nil {
+			return Div("cannot load graph")
+		}
+
+		fmt.Println("Done loading...")
+
+		siteGraph, err := models.DeserializeType[models.SiteGraph](graph)
+
+		if err != nil {
+			return Div("cannot deserialize")
+		}
+
+		element, err := siteGraph.DOM.Generate(c)
+
+		if err != nil {
+			return Div("cannot generate")
+		}
+
+		return element.(Element)
+	}
+
+}
+
 func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) Element {
 
 	dbf := func() orm.DB { return db }
@@ -131,7 +166,7 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 
 		site := router.Match(
 			c,
-			Route(`/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
+			Route(`/admin/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
 
 				id, err := hex.DecodeString(siteID)
 
@@ -150,74 +185,7 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 					return Div("cannot find site")
 				}
 
-				if site.HeadID == nil {
-					return Div("no head")
-				}
-
-				graph, err := models.GetGraphByID(dbf, *site.HeadID)
-
-				if err != nil {
-					return Div("cannot load graph")
-				}
-
-				fmt.Println("Done loading...")
-
-				tree, err := models.Deserialize(graph)
-
-				if err != nil {
-					return Div("cannot deserialize")
-				}
-
-				fmt.Println("Done deserializing...")
-
-				htmlElement, ok := tree.(*HTMLElement)
-
-				if !ok {
-					return Div("not HTML")
-				}
-
-				return htmlElement
-
-				/*
-
-					entries := []any{}
-
-					for i:=0; i<100000; i++ {
-						entries = append(entries, Li(Fmt("%d", i)))
-					}
-
-					htmlElement.Children = []any{P("this is the only child"), Strong("or is it?"), Ul(entries)}
-
-					newTree, err := models.Serialize(htmlElement)
-
-					if err != nil {
-						return Div("cannot serialize")
-					}
-
-					tx, _ := db.Begin()
-
-					if err := newTree.SaveTree(tx); err != nil {
-						tx.Rollback()
-						return Div("cannot save new tree")
-					}
-
-					tx.Commit()
-
-					site.HeadID = &newTree.ID
-
-					if err := site.Save(); err != nil {
-						return Div("cannot update site head")
-					}
-
-				*/
-
-				element, err := htmlElement.Generate(c)
-
-				if err != nil {
-					return Div("cannot generate")
-				}
-
-				return element.(Element)
+				return ServeSite(db, site)(c)
 
 			}),
 		)
@@ -242,10 +210,17 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 						"main",
 						router.Match(
 							c,
-							Route("/login", Login),
-							Route("/logout", Logout),
-							Route("/404", NotFound),
-							Route("", MainContent),
+							Route("/admin",
+								func(c Context) Element {
+									return router.Match(
+										c,
+										Route("/login", Login),
+										Route("/logout", Logout),
+										Route("/404", NotFound),
+										Route("", MainContent),
+									)
+								},
+							),
 						),
 					),
 				),
