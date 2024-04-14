@@ -4,7 +4,6 @@ import (
 	"fmt"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites/auth"
 	"github.com/klaro-org/sites/models"
 	"github.com/klaro-org/sites/ui"
 	"net/http"
@@ -13,11 +12,6 @@ import (
 	"strings"
 	"syscall"
 )
-
-var userProfileSettings = map[string]any{
-	"type": "worf",
-	"url":  "http://localhost:5000/v1",
-}
 
 type MainServer struct {
 	settings  *Settings
@@ -38,7 +32,7 @@ func (m *MainServer) ServeSite(site *models.Site, w http.ResponseWriter, r *http
 func (m *MainServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	dbf := func() orm.DB { return m.db }
 
-	if strings.HasPrefix(r.URL.Path, "/admin") {
+	if strings.HasPrefix(r.URL.Path, "/demake") {
 		// we serve the admin UI
 		m.appServer.ServeHTTP(w, r)
 		return
@@ -70,13 +64,13 @@ func (m *MainServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func Run() error {
 
-	profileProvider, err := auth.MakeUserProfileProvider(userProfileSettings)
+	settings, err := LoadSettings()
 
 	if err != nil {
 		return err
 	}
 
-	settings, err := LoadSettings()
+	profileProvider, err := MakeUserProfileProvider(settings.Auth)
 
 	if err != nil {
 		return err

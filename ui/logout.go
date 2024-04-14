@@ -30,7 +30,7 @@ func Logout(c Context) Element {
 				Class("kip-card-content", "kip-card-centered"),
 				P(
 					"You have been logged out. ",
-					A(Href("/login"), "Log back in."),
+					A(Href(UseRouter(c).URL("/login")), "Log back in."),
 				),
 			),
 		),

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"encoding/hex"
-	"fmt"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites/auth"
@@ -129,8 +128,6 @@ func ServeSite(db orm.DB, site *models.Site) func(c Context) Element {
 			return Div("cannot load graph")
 		}
 
-		fmt.Println("Done loading...")
-
 		siteGraph, err := models.DeserializeType[models.SiteGraph](graph)
 
 		if err != nil {
@@ -163,10 +160,11 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 		}
 
 		router := UseRouter(c)
+		router.SetPrefix("/demake")
 
 		site := router.Match(
 			c,
-			Route(`/admin/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
+			Route(`/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
 
 				id, err := hex.DecodeString(siteID)
 
@@ -200,7 +198,7 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 				Lang("en"),
 				Head(
 					Meta(Charset("utf-8")),
-					Title("Linearize"),
+					Title("Demake"),
 					CSS.Styles(),
 					// to do: remove this
 					L(`<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,600;12..96,800&family=Darker+Grotesque:wght@300;700;900&family=Poppins:wght@100;400;700&family=Roboto:wght@100;300;700&display=swap" rel="stylesheet">`),
@@ -210,17 +208,10 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 						"main",
 						router.Match(
 							c,
-							Route("/admin",
-								func(c Context) Element {
-									return router.Match(
-										c,
-										Route("/login", Login),
-										Route("/logout", Logout),
-										Route("/404", NotFound),
-										Route("", MainContent),
-									)
-								},
-							),
+							Route("/login", Login),
+							Route("/logout", Logout),
+							Route("/404", NotFound),
+							Route("", MainContent),
 						),
 					),
 				),

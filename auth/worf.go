@@ -17,34 +17,21 @@ type WorfUserProfileProvider struct {
 	profiles     map[string]*ProfileWithRetrievalTime
 }
 
-type WorfUserProfile struct {
-	email       string
-	superUser   bool
-	displayName string
-	sourceID    []byte
-	accessToken *WorfAccessToken
-	limits      map[string]interface{}
-	roles       []OrganizationRoles
+type WorfSettings struct {
+	URL          string `json:"url"`
+	ExpiresAfter int64  `json:"expiresAfter"`
 }
 
-type WorfOrganizationRoles struct {
-	roles        []string
-	organization *WorfOrganization
-}
-
-type WorfAccessToken struct {
-	scopes []string
-	token  []byte
-}
-
-func MakeWorfUserProfile(profile *worf.UserProfile) *WorfUserProfile {
+func MakeWorfUserProfile(profile *worf.UserProfile) *BasicUserProfile {
 	orgRoles := make([]OrganizationRoles, 0)
 
 	tokenValue, _ := hex.DecodeString(profile.AccessToken.Token)
 
-	accessToken := &WorfAccessToken{
-		scopes: profile.AccessToken.Scopes,
-		token:  tokenValue,
+	accessToken := &BasicAccessToken{
+		BasicAccessTokenFields{
+			Scopes: profile.AccessToken.Scopes,
+			Token:  tokenValue,
+		},
 	}
 
 	if len(profile.Organizations) > 0 {
@@ -57,16 +44,20 @@ func MakeWorfUserProfile(profile *worf.UserProfile) *WorfUserProfile {
 				roles = append(roles, role.Role)
 			}
 
-			organization := &WorfOrganization{
-				source:      "worf",
-				id:          organization.BinaryID(),
-				description: organization.Description,
-				name:        organization.Name,
+			organization := &BasicOrganization{
+				BasicOrganizationFields{
+					Source:      "worf",
+					ID:          organization.BinaryID(),
+					Description: organization.Description,
+					Name:        organization.Name,
+				},
 			}
 
-			or := &WorfOrganizationRoles{
-				roles:        roles,
-				organization: organization,
+			or := &BasicOrganizationRoles{
+				BasicOrganizationRolesFields{
+					Roles:        roles,
+					Organization: organization,
+				},
 			}
 
 			orgRoles = append(orgRoles, or)
@@ -81,126 +72,50 @@ func MakeWorfUserProfile(profile *worf.UserProfile) *WorfUserProfile {
 		userOrgName = profile.User.EMail
 	}
 
-	userOrganization := &WorfOrganization{
-		source:   "worf_user",
-		id:       profile.User.BinaryID(),
-		name:     userOrgName,
-		default_: true,
+	userOrganization := &BasicOrganization{
+		BasicOrganizationFields{
+			Source:  "worf_user",
+			ID:      profile.User.BinaryID(),
+			Name:    userOrgName,
+			Default: true,
+		},
 	}
 
-	sorg := &WorfOrganizationRoles{
-		roles:        []string{"superuser", "admin"},
-		organization: userOrganization,
+	sorg := &BasicOrganizationRoles{
+		BasicOrganizationRolesFields{
+			Roles:        []string{"superuser", "admin"},
+			Organization: userOrganization,
+		},
 	}
 
 	orgRoles = append(orgRoles, sorg)
 
-	userProfile := &WorfUserProfile{
-		sourceID:    profile.User.BinaryID(),
-		email:       profile.User.EMail,
-		superUser:   profile.User.SuperUser,
-		displayName: profile.User.DisplayName,
-		accessToken: accessToken,
-		limits:      profile.Limits,
-		roles:       orgRoles,
+	userProfile := &BasicUserProfile{
+		BasicUserProfileFields{
+			SourceID:    profile.User.BinaryID(),
+			EMail:       profile.User.EMail,
+			SuperUser:   profile.User.SuperUser,
+			DisplayName: profile.User.DisplayName,
+			AccessToken: accessToken,
+			Limits:      profile.Limits,
+			Roles:       orgRoles,
+			Source:      "worf",
+		},
 	}
 
 	return userProfile
 }
 
-func (w *WorfUserProfile) Source() string {
-	return "worf"
-}
+func MakeWorfUserProfileProvider(settings *WorfSettings) (UserProfileProvider, error) {
 
-func (w *WorfUserProfile) SourceID() []byte {
-	return w.sourceID
-}
-
-func (w *WorfUserProfile) EMail() string {
-	return w.email
-}
-
-func (w *WorfUserProfile) SuperUser() bool {
-	return w.superUser
-}
-
-func (w *WorfUserProfile) Limits() map[string]interface{} {
-	return w.limits
-}
-
-func (w *WorfUserProfile) DisplayName() string {
-	return w.displayName
-}
-
-func (w *WorfUserProfile) AccessToken() AccessToken {
-	return w.accessToken
-}
-
-func (w *WorfUserProfile) Roles() []OrganizationRoles {
-	return w.roles
-}
-
-func (w *WorfAccessToken) Scopes() []string {
-	return w.scopes
-}
-
-func (w *WorfAccessToken) Token() []byte {
-	return w.token
-}
-
-func (w *WorfOrganizationRoles) Roles() []string {
-	return w.roles
-}
-
-func (w *WorfOrganizationRoles) Organization() UserOrganization {
-	return w.organization
-}
-
-type WorfOrganization struct {
-	name        string
-	source      string
-	description string
-	default_    bool
-	id          []byte
-}
-
-func (w *WorfOrganization) Default() bool {
-	return w.default_
-}
-
-func (w *WorfOrganization) Name() string {
-	return w.name
-}
-
-func (w *WorfOrganization) Source() string {
-	return w.source
-}
-
-func (w *WorfOrganization) Description() string {
-	return w.description
-}
-
-func (w *WorfOrganization) ID() []byte {
-	return w.id
-}
-
-func MakeWorfUserProfileProvider(settings map[string]any) (UserProfileProvider, error) {
-	worfApiURL, ok := settings["url"].(string)
-
-	if !ok {
-		return nil, fmt.Errorf("Worf URL missing (worf.url)")
-	}
-
-	expiresAfter, ok := settings["expires-after"].(int64)
-
-	if !ok {
-		expiresAfter = 60
+	if settings.ExpiresAfter == 0 {
+		settings.ExpiresAfter = 60
 	}
 
 	return &WorfUserProfileProvider{
 		profiles:     make(map[string]*ProfileWithRetrievalTime),
-		worfURL:      worfApiURL,
-		expiresAfter: expiresAfter,
+		worfURL:      settings.URL,
+		expiresAfter: settings.ExpiresAfter,
 		mutex:        &sync.Mutex{},
 	}, nil
 }
@@ -266,7 +181,7 @@ func (a *WorfUserProfileProvider) cleanProfiles() {
 func GetTokenValue(r *http.Request) ([]byte, bool, error) {
 
 	if cookie, err := r.Cookie("auth"); err == nil {
-		if token, err := hex.DecodeString(cookie.Value); err == nil && len(token) >= 16 {
+		if token, err := hex.DecodeString(cookie.Value); err == nil && len(token) >= 4 {
 			return token, true, nil
 		}
 	}

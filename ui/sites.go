@@ -91,7 +91,7 @@ func NewSite(c Context) Element {
 			return
 		}
 
-		UseRouter(c).RedirectTo("/admin/sites")
+		UseRouter(c).RedirectTo("/sites")
 	}
 
 	formData.OnSubmit(onSubmit)
@@ -123,7 +123,7 @@ func SiteList(c Context) Element {
 	for i, site := range sites {
 		siteItems[i] = Li(
 			A(
-				Href(Fmt("/admin/sites/%s", site.ExtID.Hex())),
+				Href(UseRouter(c).URL(Fmt("/sites/%s", site.ExtID.Hex()))),
 				site.Name,
 			),
 			" // ",
@@ -137,7 +137,7 @@ func SiteList(c Context) Element {
 		Ul(
 			siteItems,
 		),
-		A(Href("/admin/sites/new"), "new site"),
+		A(Href(UseRouter(c).URL("/sites/new")), "new site"),
 	)
 }
 

@@ -3,5 +3,24 @@
 		"name":     "klaro",
 		"type":     "sqlite3",
 		"url":      "sites.sqlite3?_foreign_keys=on&parseTime=true"
+	},
+	"auth": {
+		"type": "simple",
+		"simple": {
+			"users": [
+				{
+					"email": "andreas.dewes@kiprotect.com",
+					"password": "test1234",
+					"accessToken": {
+						"scopes": ["admin"],
+						"token": "aabbccdd"
+					},
+					"roles": []
+				}
+			]
+		},
+		"worf": {
+			"url":  "http://localhost:5000/v1"
+		}
 	}
 }

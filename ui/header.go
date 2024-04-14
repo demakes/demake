@@ -134,7 +134,7 @@ func MainHeader(c Context) Element {
 						),
 					),
 				),
-				Li(A(Href("/admin/sites"), "Sites", If(tab == "sites", Class("is-active")))),
+				Li(A(Href(UseRouter(c).URL("/sites")), "Sites", If(tab == "sites", Class("is-active")))),
 				Li(
 					Styles(
 						FlexGrow(1),
@@ -174,7 +174,7 @@ func MainHeader(c Context) Element {
 						Span(user.EMail()),
 						Ul(
 							Li(
-								A(Href("/logout"), "Logout"),
+								A(Href(UseRouter(c).URL("/logout")), "Logout"),
 							),
 						),
 					),

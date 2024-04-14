@@ -48,7 +48,7 @@ func Login(c Context) Element {
 		return Div("cannot log in via password")
 	}
 
-	onSubmit := Func[any](c, func() {
+	onSubmit := func() {
 
 		if email.Get() == "" {
 			error.Set("Please enter an e-mail")
@@ -67,9 +67,11 @@ func Login(c Context) Element {
 		} else {
 			w := c.ResponseWriter()
 			http.SetCookie(w, &http.Cookie{Path: "/", Name: "auth", Value: Hex(profile.AccessToken().Token()), Secure: false, HttpOnly: true, Expires: time.Now().Add(365 * 24 * 7 * time.Hour)})
-			router.RedirectTo("/")
+			router.RedirectTo("")
 		}
-	})
+	}
+
+	form.OnSubmit(onSubmit)
 
 	return Section(
 		// Background
@@ -114,7 +116,7 @@ func Login(c Context) Element {
 					Padding(Px(40)),
 					PaddingTop(0),
 				),
-				Form(
+				form.Form(
 					Styles(
 						Display("flex"),
 						FlexDirection("column"),
@@ -136,8 +138,6 @@ func Login(c Context) Element {
 							),
 						),
 					),
-					Method("POST"),
-					OnSubmit(onSubmit),
 					Div(
 						Styles(
 							FlexGrow(1),

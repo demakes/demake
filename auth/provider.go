@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -26,23 +25,4 @@ type UserProfileProvider interface {
 
 type PasswordProvider interface {
 	GetWithPassword(email string, password string) (UserProfile, error)
-}
-
-var providers = map[string]UserProfileProviderMaker{
-	"worf": MakeWorfUserProfileProvider,
-}
-
-func MakeUserProfileProvider(settings map[string]any) (UserProfileProvider, error) {
-	providerType, ok := settings["type"].(string)
-	if !ok {
-		return nil, fmt.Errorf("Provider type config missing (user-profile-provider.type)")
-	}
-
-	maker, ok := providers[providerType]
-
-	if !ok {
-		return nil, fmt.Errorf("Unknown provider type: %s", providerType)
-	}
-
-	return maker(settings)
 }
