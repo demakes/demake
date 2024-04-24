@@ -94,7 +94,7 @@ WITH RECURSIVE
 			node
 		WHERE
 			id = $1
-		UNION ALL SELECT
+		UNION SELECT
 			edge.name,
 			edge.key,
 			edge.ind,
@@ -249,6 +249,7 @@ func GetGraphByID(db func() orm.DB, id int64) (*Node, error) {
 		); err != nil {
 			return nil, fmt.Errorf("scan error: %v", err)
 		}
+
 		graphDataList = append(graphDataList, graphData)
 	}
 

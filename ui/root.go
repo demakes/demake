@@ -2,6 +2,7 @@ package ui
 
 import (
 	"encoding/hex"
+	"fmt"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
 	"github.com/klaro-org/sites/auth"
@@ -112,26 +113,37 @@ func AuthorizedContent(c Context) Element {
 	)
 }
 
+func GetGraph(site *models.Site, dbf func() orm.DB) (*models.SiteGraph, error) {
+	if site.HeadID == nil {
+		return nil, fmt.Errorf("site doesn't have a head")
+	}
+
+	graph, err := models.GetGraphByID(dbf, *site.HeadID)
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot get graph: %v", err)
+	}
+
+	siteGraph, err := models.DeserializeType[models.SiteGraph](graph)
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot deserialize graph: %v", err)
+	}
+
+	return siteGraph, nil
+
+}
+
 func ServeSite(db orm.DB, site *models.Site) func(c Context) Element {
 
 	dbf := func() orm.DB { return db }
 
 	return func(c Context) Element {
 
-		if site.HeadID == nil {
-			return Div("no head")
-		}
-
-		graph, err := models.GetGraphByID(dbf, *site.HeadID)
+		siteGraph, err := GetGraph(site, dbf)
 
 		if err != nil {
-			return Div("cannot load graph")
-		}
-
-		siteGraph, err := models.DeserializeType[models.SiteGraph](graph)
-
-		if err != nil {
-			return Div("cannot deserialize")
+			return Div(Fmt("Cannot load site: %v", err))
 		}
 
 		element, err := siteGraph.DOM.Generate(c)
@@ -164,7 +176,7 @@ func Root(db orm.DB, profileProvider auth.UserProfileProvider) func(c Context) E
 
 		site := router.Match(
 			c,
-			Route(`/sites/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
+			Route(`/sites/view/([a-f0-9\-]+)`, func(c Context, siteID string) Element {
 
 				id, err := hex.DecodeString(siteID)
 

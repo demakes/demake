@@ -123,7 +123,7 @@ func SiteList(c Context) Element {
 	for i, site := range sites {
 		siteItems[i] = Li(
 			A(
-				Href(UseRouter(c).URL(Fmt("/sites/%s", site.ExtID.Hex()))),
+				Href(UseRouter(c).URL(Fmt("/sites/edit/%s", site.ExtID.Hex()))),
 				site.Name,
 			),
 			" // ",
@@ -149,6 +149,7 @@ func Sites(c Context) Element {
 		UseRouter(c).Match(
 			c,
 			Route("/new$", NewSite),
+			Route(`/edit/([a-f0-9\-]+)`, EditSite),
 			Route("$", SiteList),
 		),
 	)
