@@ -7,9 +7,9 @@ kill_and_run() {
   if [ $pid -ne 0 ]; then
     kill -SIGTERM $pid
   else
-    killall -SIGTERM sites
+    killall -SIGTERM demake
   fi
-  sites run  &
+  demake run  &
   pid=$!
 }
 

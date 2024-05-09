@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites"
-	"github.com/klaro-org/sites/models"
-	kt "github.com/klaro-org/sites/testing"
+	"github.com/demakes/demake"
+	"github.com/demakes/demake/models"
+	kt "github.com/demakes/demake/testing"
 	"testing"
 )
 

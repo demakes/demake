@@ -1,6 +1,6 @@
-KLARO_TEST_SETTINGS_SQLITE ?= `readlink -f settings/test/sqlite.json`
-KLARO_TEST_SETTINGS_SQLITE_IN_MEMORY ?= `readlink -f settings/test/sqlite-in-memory.json`
-KLARO_TEST_SETTINGS_POSTGRES ?= `readlink -f settings/test/postgres.json`
+DEMAKE_TEST_SETTINGS_SQLITE ?= `readlink -f settings/test/sqlite.json`
+DEMAKE_TEST_SETTINGS_SQLITE_IN_MEMORY ?= `readlink -f settings/test/sqlite-in-memory.json`
+DEMAKE_TEST_SETTINGS_POSTGRES ?= `readlink -f settings/test/postgres.json`
 
 TESTARGS ?= ""
 BENCHARGS ?= "."
@@ -13,23 +13,23 @@ build:
 
 test-postgres:
 	echo "Testing Postgres"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test ./... -count=1 -parallel=1 $(TESTARGS)
+	@DEMAKE_SETTINGS=$(DEMAKE_TEST_SETTINGS_POSTGRES) go test ./... -count=1 -parallel=1 $(TESTARGS)
 
 test-sqlite:
 	echo "Testing SQLite"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test ./... -count=1 -parallel=1 $(TESTARGS)
+	@DEMAKE_SETTINGS=$(DEMAKE_TEST_SETTINGS_SQLITE) go test ./... -count=1 -parallel=1 $(TESTARGS)
 
 test-sqlite-in-memory:
 	echo "Testing SQLite (in-memory)"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE_IN_MEMORY) go test ./... -count=1 -parallel=1 $(TESTARGS)
+	@DEMAKE_SETTINGS=$(DEMAKE_TEST_SETTINGS_SQLITE_IN_MEMORY) go test ./... -count=1 -parallel=1 $(TESTARGS)
 
 bench-sqlite:
 	echo "Benchmarking SQLite"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_SQLITE) go test -bench $(BENCHARGS) -count=1 -parallel=1 ./... $(TESTARGS)
+	@DEMAKE_SETTINGS=$(DEMAKE_TEST_SETTINGS_SQLITE) go test -bench $(BENCHARGS) -count=1 -parallel=1 ./... $(TESTARGS)
 
 bench-postgres:
 	echo "Benchmarking Postgres"
-	@KLARO_SETTINGS=$(KLARO_TEST_SETTINGS_POSTGRES) go test -bench $(BENCHARGS) -count=1 -parallel=1 ./... $(TESTARGS)
+	@DEMAKE_SETTINGS=$(DEMAKE_TEST_SETTINGS_POSTGRES) go test -bench $(BENCHARGS) -count=1 -parallel=1 ./... $(TESTARGS)
 
 test: test-sqlite test-postgres
 

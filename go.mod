@@ -1,4 +1,4 @@
-module github.com/klaro-org/sites
+module github.com/demakes/demake
 
 go 1.20
 

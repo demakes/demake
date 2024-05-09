@@ -5,7 +5,7 @@ import (
 	"fmt"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites/models"
+	"github.com/demakes/demake/models"
 )
 
 func EditSite(c Context, siteID string) Element {

@@ -2,7 +2,7 @@ package ui
 
 import (
 	. "github.com/gospel-sh/gospel"
-	"github.com/klaro-org/sites/auth"
+	"github.com/demakes/demake/auth"
 	"net/http"
 	"time"
 )

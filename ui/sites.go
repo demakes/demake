@@ -3,7 +3,7 @@ package ui
 import (
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites/models"
+	"github.com/demakes/demake/models"
 )
 
 func getSites(c Context) ([]*models.Site, error) {

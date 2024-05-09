@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites/auth"
+	"github.com/demakes/demake/auth"
 	"os"
 )
 

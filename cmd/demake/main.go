@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/klaro-org/sites"
-	"github.com/klaro-org/sites/models"
+	"github.com/demakes/demake"
+	"github.com/demakes/demake/models"
 	"log/slog"
 	"os"
 )
