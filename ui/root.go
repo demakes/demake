@@ -3,10 +3,10 @@ package ui
 import (
 	"encoding/hex"
 	"fmt"
-	. "github.com/gospel-sh/gospel"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake/auth"
 	"github.com/demakes/demake/models"
+	. "github.com/gospel-sh/gospel"
+	"github.com/gospel-sh/gospel/orm"
 )
 
 func SetDB(c Context, db orm.DB) {

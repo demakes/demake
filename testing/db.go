@@ -3,9 +3,9 @@ package testing
 import (
 	"errors"
 	"fmt"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake"
 	"github.com/demakes/demake/models"
+	"github.com/gospel-sh/gospel/orm"
 	"os"
 	"regexp"
 )
@@ -38,7 +38,7 @@ func DB(settings *sites.Settings) (orm.DB, error) {
 		return nil, err
 	}
 
-	db, err := orm.Connect("klaro", settings.Database)
+	db, err := orm.Connect("demake", settings.Database)
 
 	if err != nil {
 		return nil, err

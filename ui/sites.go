@@ -1,9 +1,9 @@
 package ui
 
 import (
+	"github.com/demakes/demake/models"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/demakes/demake/models"
 )
 
 func getSites(c Context) ([]*models.Site, error) {

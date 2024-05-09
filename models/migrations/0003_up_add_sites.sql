@@ -1,4 +1,4 @@
-UPDATE klaro_version SET version_num = 3;
+UPDATE demake_version SET version_num = 3;
 
 {{$sqlite:=false}}
 

@@ -1,12 +1,12 @@
 {
 	"database": {
-		"name":     "klaro_sites_dev",
+		"name":     "demake_development",
 		"type":     "pgx",
 		"url":      "postgresql://{.User}:{.Password}@{.Hostname}:{.Port}/{.Database}?sslmode=disable&timezone=UTC",
-		"database": "klaro_sites_development",
+		"database": "demake_development",
 		"hostname": "localhost",
 		"port":     5432,
-		"user":     "klaro",
-		"password": "klaro"
+		"user":     "demake",
+		"password": "demake"
 	}
 }

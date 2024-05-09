@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake"
 	"github.com/demakes/demake/models"
+	"github.com/gospel-sh/gospel/orm"
 	"log/slog"
 	"os"
 )
@@ -48,7 +48,7 @@ func runMigrations() error {
 		return err
 	}
 
-	db, err := orm.Connect("klaro", settings.Database)
+	db, err := orm.Connect("demake", settings.Database)
 
 	if err != nil {
 		return err

@@ -3,10 +3,10 @@ package models_test
 import (
 	"encoding/hex"
 	"encoding/json"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake"
 	"github.com/demakes/demake/models"
 	kt "github.com/demakes/demake/testing"
+	"github.com/gospel-sh/gospel/orm"
 	"testing"
 )
 

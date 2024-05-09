@@ -1,8 +1,8 @@
 package ui
 
 import (
-	. "github.com/gospel-sh/gospel"
 	"github.com/demakes/demake/auth"
+	. "github.com/gospel-sh/gospel"
 	"net/http"
 	"time"
 )

@@ -3,9 +3,9 @@ package ui
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/demakes/demake/models"
 	. "github.com/gospel-sh/gospel"
 	"github.com/gospel-sh/gospel/orm"
-	"github.com/demakes/demake/models"
 )
 
 func EditSite(c Context, siteID string) Element {

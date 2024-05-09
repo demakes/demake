@@ -1,3 +1,3 @@
-UPDATE klaro_version SET version_num = 2;
+UPDATE demake_version SET version_num = 2;
 
 DROP TABLE site;

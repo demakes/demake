@@ -1,8 +1,8 @@
 {
 	"database": {
-		"name":     "klaro",
+		"name":     "demake",
 		"type":     "sqlite3",
-		"url":      "sites.sqlite3?_foreign_keys=on&parseTime=true"
+		"url":      "demake.sqlite3?_foreign_keys=on&parseTime=true"
 	},
 	"auth": {
 		"type": "simple",

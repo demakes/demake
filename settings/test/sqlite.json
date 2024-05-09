@@ -1,8 +1,8 @@
 {
 	"test": true,
 	"database": {
-		"name":     "klaro",
+		"name":     "demake",
 		"type":     "sqlite3",
-		"url":      "/tmp/klaro-test.sqlite3?_foreign_keys=on&parseTime=true"
+		"url":      "/tmp/demake-test.sqlite3?_foreign_keys=on&parseTime=true"
 	}
 }

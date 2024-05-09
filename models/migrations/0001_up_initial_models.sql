@@ -1,8 +1,8 @@
-CREATE TABLE klaro_version (
+CREATE TABLE demake_version (
     version_num integer NOT NULL
 );
 
-INSERT INTO klaro_version (version_num) VALUES (1);
+INSERT INTO demake_version (version_num) VALUES (1);
 
 {{$sqlite:=false}}
 

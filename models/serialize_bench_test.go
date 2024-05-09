@@ -2,10 +2,10 @@ package models_test
 
 import (
 	"fmt"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake"
 	"github.com/demakes/demake/models"
 	kt "github.com/demakes/demake/testing"
+	"github.com/gospel-sh/gospel/orm"
 	"math/rand"
 	"testing"
 	"time"

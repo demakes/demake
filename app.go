@@ -2,10 +2,10 @@ package sites
 
 import (
 	"fmt"
-	. "github.com/gospel-sh/gospel"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake/models"
 	"github.com/demakes/demake/ui"
+	. "github.com/gospel-sh/gospel"
+	"github.com/gospel-sh/gospel/orm"
 	"net/http"
 	"os"
 	"os/signal"
@@ -76,7 +76,7 @@ func Run() error {
 		return err
 	}
 
-	db, err := orm.Connect("klaro", settings.Database)
+	db, err := orm.Connect("demake", settings.Database)
 
 	if err != nil {
 		return err

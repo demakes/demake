@@ -3,8 +3,8 @@ package sites
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gospel-sh/gospel/orm"
 	"github.com/demakes/demake/auth"
+	"github.com/gospel-sh/gospel/orm"
 	"os"
 )
 
@@ -22,7 +22,7 @@ type AuthSettings struct {
 
 func LoadSettings() (*Settings, error) {
 
-	settingsPath := os.Getenv("KLARO_SETTINGS")
+	settingsPath := os.Getenv("DEMAKE_SETTINGS")
 
 	if settingsPath == "" {
 		settingsPath = "settings/dev/sqlite.json"

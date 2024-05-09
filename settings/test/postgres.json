@@ -1,13 +1,13 @@
 {
 	"test": true,
 	"database": {
-		"name":     "klaro_sites_test",
+		"name":     "demake_test",
 		"type":     "pgx",
 		"url":      "postgresql://{.User}:{.Password}@{.Hostname}:{.Port}/{.Database}?sslmode=disable&timezone=UTC",
-		"database": "klaro_sites_test",
+		"database": "demake_test",
 		"hostname": "localhost",
 		"port":     5432,
-		"user":     "klaro",
-		"password": "klaro"
+		"user":     "demake",
+		"password": "demake"
 	}
 }
